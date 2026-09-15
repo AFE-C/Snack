@@ -211,10 +211,19 @@
   }
 
   .candy-logo {
-    font-size: 48px;
-    margin-bottom: 16px;
+    font-size: 42px;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
     animation: bounce 1s ease-in-out infinite;
+    font-family: 'Press Start 2P', monospace;
+    line-height: 1.2;
   }
+
+  .candy-logo .s { color: #ff6b9d; text-shadow: 3px 3px 0 #be185d, 6px 6px 0 rgba(0,0,0,0.1); }
+  .candy-logo .n { color: #f97316; text-shadow: 3px 3px 0 #9a3412, 6px 6px 0 rgba(0,0,0,0.1); }
+  .candy-logo .a { color: #facc15; text-shadow: 3px 3px 0 #a16207, 6px 6px 0 rgba(0,0,0,0.1); }
+  .candy-logo .k { color: #22c55e; text-shadow: 3px 3px 0 #15803d, 6px 6px 0 rgba(0,0,0,0.1); }
+  .candy-logo .e { color: #3b82f6; text-shadow: 3px 3px 0 #1d4ed8, 6px 6px 0 rgba(0,0,0,0.1); }
 
   @keyframes bounce {
     0%, 100% { transform: translateY(0); }
@@ -286,7 +295,7 @@
     空格 开始 / 重开 &nbsp;|&nbsp; P 暂停
   </div>
   <div id="overlay" class="overlay">
-    <div class="candy-logo">🍓🍊🍇🍉</div>
+    <div class="candy-logo"><span class="s">S</span><span class="n">N</span><span class="a">A</span><span class="k">K</span><span class="e">E</span></div>
     <div class="overlay-title">CANDY SNAKE</div>
     <div class="overlay-score">最高分: <span id="overlayBest">0</span></div>
     <div class="overlay-hint">
@@ -793,15 +802,15 @@
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 云朵
+    // 云朵（像素对齐，避免抖动）
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     clouds.forEach(c => {
-      const cx = c.x + Math.sin(time * 0.01 + c.x) * 5;
-      const cy = c.y;
+      const cx = Math.floor(c.x + Math.sin(time * 0.008 + c.x * 0.1) * 4);
+      const cy = Math.floor(c.y);
       const s = c.size;
-      ctx.fillRect(cx, cy, 24 * s, 8 * s);
-      ctx.fillRect(cx + 4 * s, cy - 4 * s, 16 * s, 4 * s);
-      ctx.fillRect(cx + 8 * s, cy - 6 * s, 8 * s, 2 * s);
+      ctx.fillRect(cx, cy, Math.floor(24 * s), Math.floor(8 * s));
+      ctx.fillRect(cx + Math.floor(4 * s), cy - Math.floor(4 * s), Math.floor(16 * s), Math.floor(4 * s));
+      ctx.fillRect(cx + Math.floor(8 * s), cy - Math.floor(6 * s), Math.floor(8 * s), Math.floor(2 * s));
     });
 
     // 星星闪烁
@@ -836,7 +845,8 @@
   function drawFood() {
     const fx = food.x * GRID;
     const fy = food.y * GRID;
-    const bob = Math.sin(time * 0.05 + food.x) * 1.5;
+    // 浮动动画取整，避免像素抖动
+    const bob = Math.floor(Math.sin(time * 0.04 + food.x * 0.5) * 2);
     const y = fy + bob;
 
     // 像素光晕（十字星）
@@ -1175,9 +1185,9 @@
   function showOverlay(title, scoreText, highlight) {
     overlay.classList.remove('hidden');
     overlay.innerHTML = `
-      <div class="candy-logo">🍓🍊🍇🍉</div>
-      <div class="overlay-title">${title}</div>
-      <div class="overlay-score">${scoreText}</div>
+      <div class="candy-logo"><span class="s">S</span><span class="n">N</span><span class="a">A</span><span class="k">K</span><span class="e">E</span></div>
+       <div class="overlay-title">${title}</div>
+       <div class="overlay-score">${scoreText}</div>
       ${highlight ? `<div class="overlay-highlight">${highlight}</div>` : ''}
       <div class="overlay-hint">
         按 空格 重新开始<br>
