@@ -845,9 +845,7 @@
   function drawFood() {
     const fx = food.x * GRID;
     const fy = food.y * GRID;
-    // 浮动动画取整，避免像素抖动
-    const bob = Math.floor(Math.sin(time * 0.04 + food.x * 0.5) * 2);
-    const y = fy + bob;
+    const y = fy;
 
     // 像素光晕（十字星）
     const glowAlpha = 0.25 + 0.1 * Math.sin(time * 0.08);
