@@ -46,9 +46,29 @@
   .score-board {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 12px;
     margin-bottom: 12px;
     color: #9bbc0f;
+  }
+
+  .sound-btn {
+    background: #306230;
+    border: 2px solid #9bbc0f;
+    color: #9bbc0f;
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sound-btn:active {
+    background: #0f380f;
   }
 
   .score-board span {
@@ -161,6 +181,7 @@
   <div class="score-board">
     <span>SCORE: <span id="score">0</span></span>
     <span>BEST: <span id="highScore">0</span></span>
+    <button class="sound-btn" id="soundBtn" title="开关音效">🔊</button>
   </div>
   <canvas id="gameCanvas" width="400" height="400"></canvas>
   <div class="controls-hint">
@@ -205,6 +226,58 @@
   let snake, direction, nextDirection, food, score, highScore, speed, gameStatus, lastTime, accumulator;
   let touchStartX = 0, touchStartY = 0;
   const SWIPE_THRESHOLD = 30;
+
+  // 音效系统
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTone(freq, duration, type, volume) {
+    if (!soundEnabled || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume || 0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function playEat() {
+    playTone(880, 0.08, 'square', 0.1);
+    setTimeout(() => playTone(1320, 0.1, 'square', 0.08), 60);
+  }
+
+  function playGameOver() {
+    playTone(440, 0.15, 'square', 0.12);
+    setTimeout(() => playTone(330, 0.15, 'square', 0.1), 120);
+    setTimeout(() => playTone(220, 0.3, 'square', 0.08), 240);
+  }
+
+  function playStart() {
+    playTone(523, 0.08, 'square', 0.08);
+    setTimeout(() => playTone(659, 0.08, 'square', 0.08), 80);
+    setTimeout(() => playTone(784, 0.12, 'square', 0.1), 160);
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundBtn');
+    if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+  }
 
   function init() {
     highScore = loadHighScore();
@@ -285,6 +358,7 @@
       score++;
       updateScore();
       spawnFood();
+      playEat();
     } else {
       snake.pop();
     }
@@ -366,11 +440,13 @@
   }
 
   function startGame() {
+    initAudio();
     resetGame();
     gameStatus = 'playing';
     accumulator = 0;
     lastTime = 0;
     overlay.classList.add('hidden');
+    playStart();
   }
 
   function pauseGame() {
@@ -390,6 +466,7 @@
   function gameOver() {
     gameStatus = 'gameover';
     saveHighScore();
+    playGameOver();
     const isNewRecord = score === highScore && score > 0;
     showOverlay(
       'GAME OVER',
@@ -437,6 +514,12 @@
 
     startBtn.addEventListener('click', (e) => {
       startGame();
+      e.target.blur();
+    });
+
+    document.getElementById('soundBtn').addEventListener('click', (e) => {
+      initAudio();
+      toggleSound();
       e.target.blur();
     });
 
