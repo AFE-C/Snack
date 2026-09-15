@@ -285,7 +285,6 @@
       score++;
       updateScore();
       spawnFood();
-      if (speed > 60) speed -= 3;
     } else {
       snake.pop();
     }
@@ -411,7 +410,10 @@
       </div>
       <button class="pixel-btn" id="restartBtn">RESTART</button>
     `;
-    document.getElementById('restartBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', (e) => {
+      startGame();
+      e.target.blur();
+    });
   }
 
   function bindEvents() {
@@ -433,7 +435,10 @@
       }
     });
 
-    startBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('click', (e) => {
+      startGame();
+      e.target.blur();
+    });
 
     canvas.addEventListener('touchstart', (e) => {
       touchStartX = e.touches[0].clientX;
