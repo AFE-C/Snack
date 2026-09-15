@@ -279,6 +279,53 @@
     if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
   }
 
+  // 粒子系统
+  let particles = [];
+
+  function spawnParticles(gridX, gridY, color, count) {
+    const cx = gridX * GRID + GRID / 2;
+    const cy = gridY * GRID + GRID / 2;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+      const speed = 1 + Math.random() * 3;
+      particles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 2 + Math.random() * 3,
+        color: color,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.02
+      });
+    }
+  }
+
+  function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.1;
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function drawParticles() {
+    particles.forEach(p => {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(
+        Math.floor(p.x - p.size / 2),
+        Math.floor(p.y - p.size / 2),
+        Math.floor(p.size),
+        Math.floor(p.size)
+      );
+    });
+    ctx.globalAlpha = 1;
+  }
+
   function init() {
     highScore = loadHighScore();
     highScoreEl.textContent = highScore;
@@ -297,6 +344,7 @@
     score = 0;
     speed = 150;
     accumulator = 0;
+    particles = [];
     gameStatus = 'start';
     spawnFood();
     updateScore();
@@ -357,6 +405,7 @@
     if (head.x === food.x && head.y === food.y) {
       score++;
       updateScore();
+      spawnParticles(food.x, food.y, COLORS.food, 12);
       spawnFood();
       playEat();
     } else {
@@ -419,6 +468,8 @@
         ctx.fillRect(ex2, ey2, eyeSize, eyeSize);
       }
     });
+
+    drawParticles();
   }
 
   function gameLoop(timestamp) {
@@ -435,6 +486,7 @@
       }
     }
 
+    updateParticles();
     draw();
     requestAnimationFrame(gameLoop);
   }
@@ -467,6 +519,12 @@
     gameStatus = 'gameover';
     saveHighScore();
     playGameOver();
+    // 蛇身碎裂粒子效果
+    snake.forEach((seg, i) => {
+      setTimeout(() => {
+        spawnParticles(seg.x, seg.y, i === 0 ? COLORS.snakeHead : COLORS.snakeBody, 6);
+      }, i * 30);
+    });
     const isNewRecord = score === highScore && score > 0;
     showOverlay(
       'GAME OVER',
