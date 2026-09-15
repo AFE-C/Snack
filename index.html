@@ -281,24 +281,49 @@
 
   // 粒子系统
   let particles = [];
+  let shockwaves = [];
 
-  function spawnParticles(gridX, gridY, color, count) {
+  function spawnParticles(gridX, gridY, color, count, options) {
     const cx = gridX * GRID + GRID / 2;
     const cy = gridY * GRID + GRID / 2;
+    const opts = options || {};
+    const speedMul = opts.speedMul || 1;
+    const sizeMul = opts.sizeMul || 1;
+    const secondColor = opts.secondColor || color;
+
     for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-      const speed = 1 + Math.random() * 3;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (1.5 + Math.random() * 4.5) * speedMul;
+      const isSecond = Math.random() < 0.4;
       particles.push({
         x: cx,
         y: cy,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 2 + Math.random() * 3,
-        color: color,
+        baseSize: (2 + Math.random() * 5) * sizeMul,
+        size: 0,
+        color: isSecond ? secondColor : color,
         life: 1,
-        decay: 0.02 + Math.random() * 0.02
+        maxLife: 0.8 + Math.random() * 0.6,
+        decay: 0.012 + Math.random() * 0.015,
+        gravity: 0.08 + Math.random() * 0.1,
+        glow: Math.random() < 0.3,
+        phase: Math.random() * Math.PI * 2
       });
     }
+  }
+
+  function spawnShockwave(gridX, gridY, color) {
+    const cx = gridX * GRID + GRID / 2;
+    const cy = gridY * GRID + GRID / 2;
+    shockwaves.push({
+      x: cx,
+      y: cy,
+      radius: 2,
+      maxRadius: GRID * 2.5,
+      color: color,
+      life: 1
+    });
   }
 
   function updateParticles() {
@@ -306,23 +331,70 @@
       const p = particles[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.1;
+      p.vy += p.gravity;
+      p.vx *= 0.98;
       p.life -= p.decay;
+      p.phase += 0.2;
+      // 大小呼吸效果
+      const lifeRatio = p.life / p.maxLife;
+      const grow = Math.min(1, lifeRatio * 3);
+      const shrink = Math.max(0, (lifeRatio - 0.3) / 0.7);
+      p.size = p.baseSize * grow * shrink * (1 + 0.2 * Math.sin(p.phase));
       if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    for (let i = shockwaves.length - 1; i >= 0; i--) {
+      const s = shockwaves[i];
+      s.radius += (s.maxRadius - s.radius) * 0.15;
+      s.life -= 0.04;
+      if (s.life <= 0) shockwaves.splice(i, 1);
     }
   }
 
   function drawParticles() {
+    // 绘制冲击环
+    shockwaves.forEach(s => {
+      ctx.globalAlpha = s.life * 0.6;
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      // 内层亮环
+      ctx.globalAlpha = s.life * 0.3;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // 绘制粒子（发光的先画一层模糊）
+    particles.forEach(p => {
+      if (p.glow && p.size > 1) {
+        ctx.globalAlpha = Math.max(0, p.life) * 0.4;
+        ctx.fillStyle = p.color;
+        const gs = p.size * 2.5;
+        ctx.fillRect(
+          Math.floor(p.x - gs / 2),
+          Math.floor(p.y - gs / 2),
+          Math.floor(gs),
+          Math.floor(gs)
+        );
+      }
+    });
+
+    // 正常粒子
     particles.forEach(p => {
       ctx.globalAlpha = Math.max(0, p.life);
       ctx.fillStyle = p.color;
       ctx.fillRect(
         Math.floor(p.x - p.size / 2),
         Math.floor(p.y - p.size / 2),
-        Math.floor(p.size),
-        Math.floor(p.size)
+        Math.max(1, Math.floor(p.size)),
+        Math.max(1, Math.floor(p.size))
       );
     });
+
     ctx.globalAlpha = 1;
   }
 
@@ -345,6 +417,7 @@
     speed = 150;
     accumulator = 0;
     particles = [];
+    shockwaves = [];
     gameStatus = 'start';
     spawnFood();
     updateScore();
@@ -405,7 +478,12 @@
     if (head.x === food.x && head.y === food.y) {
       score++;
       updateScore();
-      spawnParticles(food.x, food.y, COLORS.food, 12);
+      spawnParticles(food.x, food.y, COLORS.food, 24, {
+        speedMul: 1.3,
+        sizeMul: 1.2,
+        secondColor: '#ffd93d'
+      });
+      spawnShockwave(food.x, food.y, COLORS.food);
       spawnFood();
       playEat();
     } else {
@@ -522,8 +600,13 @@
     // 蛇身碎裂粒子效果
     snake.forEach((seg, i) => {
       setTimeout(() => {
-        spawnParticles(seg.x, seg.y, i === 0 ? COLORS.snakeHead : COLORS.snakeBody, 6);
-      }, i * 30);
+        spawnParticles(seg.x, seg.y, i === 0 ? COLORS.snakeHead : COLORS.snakeBody, 10, {
+          speedMul: 1.5,
+          sizeMul: 1.3,
+          secondColor: '#ffd93d'
+        });
+        spawnShockwave(seg.x, seg.y, i === 0 ? COLORS.snakeHead : COLORS.snakeBody);
+      }, i * 25);
     });
     const isNewRecord = score === highScore && score > 0;
     showOverlay(
