@@ -1,11 +1,10 @@
-# OS
+node_modules/
+dist/
+coverage/
+*.log
 .DS_Store
 Thumbs.db
-
-# IDE
-.vscode/
 .idea/
-*.swp
-
-# Logs
-*.log
+work/
+.vite/
+*.zip
