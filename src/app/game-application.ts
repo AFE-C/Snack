@@ -12,6 +12,7 @@ interface ApplicationOptions {
   readonly audio: AudioPort;
   readonly storage: StorageAdapter;
   readonly clock: FrameClock;
+  readonly onLevelCompleted?: (levelId: string) => void;
 }
 
 /** 协调游戏与外设；一生只持有一个 RAF，重开只替换当前局的数据。 */
@@ -21,6 +22,7 @@ export class GameApplication {
   private readonly audio: AudioPort;
   private readonly storage: StorageAdapter;
   private readonly clock: FrameClock;
+  private readonly onLevelCompleted: ((levelId: string) => void) | undefined;
   private highScore: number;
   private soundEnabled: boolean;
   private frameId: number | null = null;
@@ -37,6 +39,7 @@ export class GameApplication {
     this.audio = options.audio;
     this.storage = options.storage;
     this.clock = options.clock;
+    this.onLevelCompleted = options.onLevelCompleted;
     const settings = this.storage.load();
     this.highScore = settings.highScore;
     this.soundEnabled = settings.soundEnabled;
@@ -67,6 +70,10 @@ export class GameApplication {
       case 'pause':
         this.dispatch({ type: 'pause' });
         break;
+      case 'cut-tail':
+        this.audio.unlock();
+        this.dispatch({ type: 'cut-tail' });
+        break;
       case 'toggle-pause':
         this.dispatch({ type: this.getSnapshot().status === 'paused' ? 'resume' : 'pause' });
         break;
@@ -83,6 +90,13 @@ export class GameApplication {
         this.audio.unlock();
         this.storage.saveSoundEnabled(this.soundEnabled);
         this.updateHud();
+        break;
+      case 'home':
+      case 'open-campaign':
+      case 'open-classic':
+      case 'level-select':
+      case 'select-level':
+      case 'next-level':
         break;
     }
   }
@@ -166,13 +180,18 @@ export class GameApplication {
           break;
         case 'game-ended':
           this.resetClock();
-          this.isNewRecord = event.score > this.highScore;
+          this.isNewRecord = snapshot.modeId === 'classic' && event.score > this.highScore;
           if (this.isNewRecord) {
             this.highScore = event.score;
             this.storage.saveHighScore(this.highScore);
           }
           this.pendingEnd = { sessionId: snapshot.sessionId, elapsedMs: 0 };
           break;
+        case 'level-completed':
+          this.onLevelCompleted?.(event.levelId);
+          break;
+        case 'tail-cut':
+        case 'exit-opened':
         case 'food-eaten':
         case 'combo-milestone':
           break;

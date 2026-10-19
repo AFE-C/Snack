@@ -1,7 +1,9 @@
-import type { PlayerSettings, StorageAdapter } from '../app/ports';
+import type { CampaignProgress, PlayerSettings, StorageAdapter } from '../app/ports';
+import { parseCampaignProgress } from '../app/campaign-progress';
 
 export const HIGH_SCORE_KEY = 'candySnakeHighScore';
 export const SOUND_ENABLED_KEY = 'candySnakeSoundEnabled';
+export const CAMPAIGN_PROGRESS_KEY = 'candySnakeCampaignProgress';
 
 export type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -24,6 +26,19 @@ export class BrowserStorage implements StorageAdapter {
 
   saveSoundEnabled(enabled: boolean): void {
     this.write(SOUND_ENABLED_KEY, String(enabled));
+  }
+
+  loadCampaignProgress(): CampaignProgress {
+    return parseCampaignProgress(this.read(CAMPAIGN_PROGRESS_KEY));
+  }
+
+  saveCampaignProgress(progress: CampaignProgress): void {
+    const raw = JSON.stringify({ version: 1, completedLevelIds: progress.completedLevelIds });
+    const validated = parseCampaignProgress(raw);
+    this.write(
+      CAMPAIGN_PROGRESS_KEY,
+      JSON.stringify({ version: 1, completedLevelIds: validated.completedLevelIds }),
+    );
   }
 
   private read(key: string): string | null {

@@ -4,68 +4,130 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ff6b9d" />
-    <meta name="description" content="糖果像素风贪吃蛇：吃水果、积累连击，挑战自己的最高分。" />
+    <meta
+      name="description"
+      content="糖果贪吃蛇：收集订单、穿过巧克力墙，用断尾技能闯过三关，也能挑战经典最高分。"
+    />
     <title>Candy Snake - 糖果贪吃蛇</title>
   </head>
   <body>
     <main class="game-container" id="gameRoot" aria-label="糖果贪吃蛇">
       <h1 class="game-title">🍬 CANDY SNAKE 🍭</h1>
-      <div class="score-board">
-        <div class="score-box">SCORE<br /><span id="score">0</span></div>
-        <div class="score-box">COMBO<br /><span id="combo">x0</span></div>
-        <div class="score-box">BEST<br /><span id="highScore">0</span></div>
-        <div class="toolbar">
+      <section id="homeScreen" class="menu-screen" aria-labelledby="homeTitle">
+        <p class="menu-art" aria-hidden="true">🍓 🍬 🍊</p>
+        <h2 id="homeTitle">拐个弯，去糖果世界</h2>
+        <p class="menu-intro">收集水果订单，找到亮起的出口。<br />身体太长？断尾腾出一条路。</p>
+        <button class="pixel-btn mode-button" data-action="open-campaign" type="button">
+          糖果闯关<span>三张地图 · 订单收集 · Q 断尾</span>
+        </button>
+        <button class="secondary-btn mode-button" data-action="open-classic" type="button">
+          经典模式<span>20 × 20 棋盘 · 挑战最高分</span>
+        </button>
+        <p id="homeProgress" class="menu-note"></p>
+      </section>
+      <section id="levelScreen" class="menu-screen" aria-labelledby="levelSelectTitle" hidden>
+        <h2 id="levelSelectTitle">选一站，开始送糖</h2>
+        <p class="menu-intro">完成订单后，走进亮起的出口。<br />每通一关，解锁下一站。</p>
+        <div id="levelList" class="level-list"></div>
+        <p class="menu-note" id="levelProgress"></p>
+        <button class="text-btn" data-action="home" type="button">返回首页</button>
+      </section>
+      <section id="playScreen" class="play-screen" aria-label="游戏区域" hidden>
+        <div class="session-heading">
+          <p id="levelLabel" class="session-label">经典模式</p>
+          <button class="text-btn" id="menuBtn" data-action="home" type="button">返回首页</button>
+        </div>
+        <div class="score-board">
+          <div class="score-box">SCORE<br /><span id="score">0</span></div>
+          <div class="score-box">COMBO<br /><span id="combo">x0</span></div>
+          <div class="score-box">
+            <span id="recordLabel" class="score-label">BEST</span><br /><span id="highScore"
+              >0</span
+            >
+          </div>
+          <div class="toolbar">
+            <button
+              class="sound-btn"
+              id="pauseBtn"
+              data-action="toggle-pause"
+              type="button"
+              aria-label="暂停游戏"
+              title="暂停游戏"
+              disabled
+            >
+              Ⅱ
+            </button>
+            <button
+              class="sound-btn"
+              id="soundBtn"
+              data-action="toggle-sound"
+              type="button"
+              aria-label="关闭音效"
+              title="关闭音效"
+              aria-pressed="true"
+            >
+              🔊
+            </button>
+          </div>
+        </div>
+        <section id="campaignHud" class="campaign-hud" aria-label="当前订单" hidden>
+          <div id="orderProgress" class="order-progress"></div>
+          <p id="exitHint" class="exit-hint" role="status" aria-live="polite">完成订单，点亮出口</p>
+        </section>
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas
+            id="gameCanvas"
+            width="400"
+            height="400"
+            tabindex="0"
+            aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。"
+            >请使用支持 Canvas 的浏览器游玩。</canvas
+          >
+          <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
+        </div>
+        <div id="campaignTools" class="campaign-tools" hidden>
           <button
-            class="sound-btn"
-            id="pauseBtn"
-            data-action="toggle-pause"
+            id="cutTailBtn"
+            class="secondary-btn cut-tail-btn"
+            data-action="cut-tail"
             type="button"
-            aria-label="暂停游戏"
-            title="暂停游戏"
             disabled
           >
-            Ⅱ
+            Q 断尾 · 还需长到 6 节
           </button>
-          <button
-            class="sound-btn"
-            id="soundBtn"
-            data-action="toggle-sound"
-            type="button"
-            aria-label="关闭音效"
-            title="关闭音效"
-            aria-pressed="true"
-          >
-            🔊
+          <p class="skill-note">舍去尾部 3 节，保留至少 3 节。分数与订单不变。</p>
+        </div>
+        <div class="touch-directions" aria-label="触屏方向控制">
+          <button data-action="turn" data-direction="left" type="button" aria-label="向左">
+            ←
+          </button>
+          <button data-action="turn" data-direction="up" type="button" aria-label="向上">↑</button>
+          <button data-action="turn" data-direction="down" type="button" aria-label="向下">
+            ↓
+          </button>
+          <button data-action="turn" data-direction="right" type="button" aria-label="向右">
+            →
           </button>
         </div>
-      </div>
-      <div class="canvas-wrap" id="canvasWrap">
-        <canvas
-          id="gameCanvas"
-          width="400"
-          height="400"
-          data-action="primary"
-          tabindex="0"
-          aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。"
-          >请使用支持 Canvas 的浏览器游玩。</canvas
-        >
-        <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
-      </div>
-      <p class="controls-hint" id="controlsHint">
-        方向键 / WASD / 触屏滑动<br />空格 开始 / 重开 &nbsp;|&nbsp; P / Esc 暂停
-      </p>
-      <section id="overlay" class="overlay" data-action="primary" aria-labelledby="overlayTitle">
-        <div class="candy-logo" aria-hidden="true">
-          <span class="s">S</span><span class="n">N</span><span class="a">A</span
-          ><span class="k">K</span><span class="e">E</span>
-        </div>
-        <h2 class="overlay-title" id="overlayTitle">CANDY SNAKE</h2>
-        <p class="overlay-score" id="overlayScore">最高分: 0</p>
-        <p class="overlay-highlight" id="overlayHighlight" hidden></p>
-        <p class="overlay-hint" id="overlayHint">吃水果累积连击<br />每 10 连击有惊喜哦 ✨</p>
-        <button class="pixel-btn" id="primaryBtn" data-action="primary" type="button">
-          开始游戏
-        </button>
+        <p class="controls-hint" id="controlsHint">
+          方向键 / WASD / 触屏滑动<br />空格 开始 / 重开 &nbsp;|&nbsp; P / Esc 暂停
+        </p>
+        <section id="overlay" class="overlay" aria-labelledby="overlayTitle">
+          <div class="candy-logo" aria-hidden="true">
+            <span class="s">S</span><span class="n">N</span><span class="a">A</span
+            ><span class="k">K</span><span class="e">E</span>
+          </div>
+          <h2 class="overlay-title" id="overlayTitle">CANDY SNAKE</h2>
+          <p class="overlay-score" id="overlayScore">最高分: 0</p>
+          <p class="overlay-highlight" id="overlayHighlight" hidden></p>
+          <p class="overlay-hint" id="overlayHint">吃水果累积连击<br />每 10 连击有惊喜哦 ✨</p>
+          <button class="pixel-btn" id="primaryBtn" data-action="primary" type="button">
+            开始游戏
+          </button>
+          <button class="text-btn" id="overlayMenuBtn" data-action="home" type="button">
+            返回首页
+          </button>
+        </section>
       </section>
     </main>
     <script id="font-license" type="text/plain">

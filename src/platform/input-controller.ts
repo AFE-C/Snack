@@ -46,6 +46,12 @@ export class InputController {
     canvas.removeEventListener('pointerdown', this.onPointerDown);
     canvas.removeEventListener('pointerup', this.onPointerUp);
     canvas.removeEventListener('pointercancel', this.onPointerCancel);
+    this.clearGesture();
+  }
+
+  clearGesture(): void {
+    if (this.touch && this.options.canvas.hasPointerCapture?.(this.touch.id))
+      this.options.canvas.releasePointerCapture(this.touch.id);
     this.touch = null;
   }
 
@@ -61,6 +67,9 @@ export class InputController {
       return;
     }
     const key = event.key.toLowerCase();
+    // 聚焦的按钮由浏览器处理 Enter/Space，菜单也可完整用键盘操作。
+    if ((key === 'enter' || key === ' ') && target instanceof Element && target.closest('button'))
+      return;
     const direction = KEY_DIRECTIONS[key];
     if (direction) {
       event.preventDefault();
@@ -71,6 +80,9 @@ export class InputController {
     } else if (key === 'p' || key === 'escape') {
       event.preventDefault();
       if (!event.repeat) this.options.onAction({ type: 'toggle-pause' });
+    } else if (key === 'q') {
+      event.preventDefault();
+      if (!event.repeat) this.options.onAction({ type: 'cut-tail' });
     }
   };
 
@@ -89,6 +101,29 @@ export class InputController {
       case 'toggle-sound':
         this.options.onAction({ type: 'toggle-sound' });
         break;
+      case 'cut-tail':
+      case 'home':
+      case 'open-campaign':
+      case 'open-classic':
+      case 'level-select':
+      case 'next-level':
+        this.options.onAction({ type: control.dataset.action });
+        break;
+      case 'select-level':
+        if (control.dataset.levelId)
+          this.options.onAction({ type: 'select-level', levelId: control.dataset.levelId });
+        break;
+      case 'turn': {
+        const direction = control.dataset.direction;
+        if (
+          direction === 'up' ||
+          direction === 'down' ||
+          direction === 'left' ||
+          direction === 'right'
+        )
+          this.options.onAction({ type: 'turn', direction });
+        break;
+      }
     }
     control.blur();
   };

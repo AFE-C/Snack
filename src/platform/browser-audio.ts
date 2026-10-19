@@ -60,8 +60,13 @@ export class BrowserAudio implements AudioPort {
       }
     } else if (event.type === 'combo-milestone') {
       this.milestone(event.level);
+    } else if (event.type === 'tail-cut') {
+      this.tone(660, 0.08, 'triangle', 0.1);
+      this.tone(330, 0.12, 'triangle', 0.08, 0.06);
+    } else if (event.type === 'exit-opened') {
+      this.milestone(1);
     } else if (event.type === 'game-ended') {
-      if (event.reason === 'completed') this.milestone(2);
+      if (event.reason === 'completed' || event.reason === 'order-completed') this.milestone(2);
       else {
         this.tone(440, 0.15, 'square', 0.12);
         this.tone(330, 0.15, 'square', 0.1, 0.12);

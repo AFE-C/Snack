@@ -58,7 +58,8 @@ export class CanvasRenderer {
     this.timeMs += deltaMs;
     this.drawBackground(snapshot);
     this.drawObstacles(snapshot);
-    drawFood(this.ctx, snapshot.food, CELL_SIZE, this.timeMs);
+    this.drawExit(snapshot);
+    for (const food of snapshot.foods) drawFood(this.ctx, food, CELL_SIZE, this.timeMs);
     this.drawSnake(snapshot);
     effects.draw(this.ctx);
   }
@@ -67,12 +68,34 @@ export class CanvasRenderer {
     for (const obstacle of snapshot.level.obstacles) {
       const x = obstacle.x * CELL_SIZE;
       const y = obstacle.y * CELL_SIZE;
-      this.ctx.fillStyle = '#a78bca';
+      const chocolate = snapshot.victoryCondition === 'orders-and-exit';
+      this.ctx.fillStyle = chocolate ? '#8a5141' : '#a78bca';
       this.ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      this.ctx.fillStyle = '#d8b4fe';
+      this.ctx.fillStyle = chocolate ? '#c68b63' : '#d8b4fe';
       this.ctx.fillRect(x + 3, y + 3, CELL_SIZE - 6, 3);
-      this.ctx.strokeStyle = '#7e5299';
+      this.ctx.strokeStyle = chocolate ? '#63382f' : '#7e5299';
       this.ctx.strokeRect(x + 1.5, y + 1.5, CELL_SIZE - 3, CELL_SIZE - 3);
+    }
+  }
+
+  private drawExit(snapshot: GameSnapshot): void {
+    if (snapshot.victoryCondition !== 'orders-and-exit' || !snapshot.level.exit) return;
+    const { ctx } = this;
+    const { x, y } = snapshot.level.exit;
+    const left = x * CELL_SIZE;
+    const top = y * CELL_SIZE;
+    ctx.fillStyle = snapshot.exitActive ? '#58bda0' : '#b8a5c7';
+    ctx.fillRect(left + 2, top + 2, 16, 16);
+    ctx.fillStyle = snapshot.exitActive ? '#d5ffe2' : '#eee3f4';
+    ctx.fillRect(left + 5, top + 5, 10, 13);
+    ctx.fillStyle = snapshot.exitActive ? '#23815e' : '#806890';
+    ctx.fillRect(left + 9, top + 8, 2, 7);
+    ctx.fillRect(left + 7, top + 10, 6, 2);
+    ctx.fillRect(left + 8, top + 9, 4, 2);
+    if (snapshot.exitActive) {
+      ctx.strokeStyle = '#24825f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(left + 0.5, top + 0.5, 19, 19);
     }
   }
 

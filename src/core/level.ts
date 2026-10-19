@@ -48,9 +48,58 @@ export function prepareLevel(source: LevelDefinition): LevelDefinition {
   if (head && neck && samePosition({ x: head.x + vector.x, y: head.y + vector.y }, neck)) {
     fail('初始方向不能朝向颈部');
   }
+  if (source.order !== undefined || source.exit !== undefined) {
+    if (!source.order?.length || !source.exit) fail('订单与出口必须同时配置');
+    const exit = source.exit;
+    if (
+      !exit ||
+      !isGridPosition(exit) ||
+      !isInside(exit, source) ||
+      occupied.has(positionKey(exit))
+    ) {
+      fail('出口必须位于未被占用的有效格子');
+    }
+    const fruitTypes = new Set<string>();
+    for (const item of source.order ?? []) {
+      if (
+        !item.fruitType.trim() ||
+        fruitTypes.has(item.fruitType) ||
+        !Number.isSafeInteger(item.required) ||
+        item.required <= 0
+      ) {
+        fail('订单需要不重复的水果类型和正整数数量');
+      }
+      fruitTypes.add(item.fruitType);
+    }
+    // 所有可走格都应从出生点可达，避免水果刷在封闭区域。
+    const walls = new Set(source.obstacles.map(positionKey));
+    const reached = new Set<string>();
+    const pending: Position[] = head ? [head] : [];
+    for (let index = 0; index < pending.length; index += 1) {
+      const point = pending[index];
+      if (!point) continue;
+      const key = positionKey(point);
+      if (reached.has(key)) continue;
+      reached.add(key);
+      for (const offset of Object.values(DIRECTION_VECTORS)) {
+        const next = { x: point.x + offset.x, y: point.y + offset.y };
+        if (
+          isInside(next, source) &&
+          !walls.has(positionKey(next)) &&
+          !reached.has(positionKey(next))
+        )
+          pending.push(next);
+      }
+    }
+    if (reached.size !== source.cols * source.rows - walls.size) fail('订单地图存在不可达区域');
+  }
   return Object.freeze({
     ...source,
     obstacles: Object.freeze(source.obstacles.map((point) => Object.freeze({ ...point }))),
     initialSnake: Object.freeze(source.initialSnake.map((point) => Object.freeze({ ...point }))),
+    ...(source.order
+      ? { order: Object.freeze(source.order.map((item) => Object.freeze({ ...item }))) }
+      : {}),
+    ...(source.exit ? { exit: Object.freeze({ ...source.exit }) } : {}),
   });
 }

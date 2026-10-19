@@ -5,7 +5,8 @@ export interface Position {
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 export type GameStatus = 'start' | 'playing' | 'paused' | 'gameover' | 'won';
-export type EndReason = 'wall' | 'body' | 'obstacle' | 'completed';
+export type EndReason = 'wall' | 'body' | 'obstacle' | 'completed' | 'order-completed';
+export type VictoryCondition = 'fill-board' | 'orders-and-exit';
 export type RandomSource = () => number;
 
 export const DIRECTION_VECTORS: Readonly<Record<Direction, Position>> = Object.freeze({
@@ -28,6 +29,20 @@ export interface Food extends Position {
   readonly points: number;
 }
 
+export interface OrderRequirement {
+  readonly fruitType: string;
+  readonly required: number;
+}
+
+export interface OrderProgress extends OrderRequirement {
+  readonly collected: number;
+}
+
+export interface TailCutRule {
+  readonly segments: number;
+  readonly minimumLength: number;
+}
+
 export interface LevelDefinition {
   readonly id: string;
   readonly name: string;
@@ -37,6 +52,8 @@ export interface LevelDefinition {
   /** 从头到尾排列，方向不能指向颈部。 */
   readonly initialSnake: readonly Position[];
   readonly initialDirection: Direction;
+  readonly order?: readonly OrderRequirement[];
+  readonly exit?: Position;
 }
 
 export interface RuleContext {
@@ -52,6 +69,9 @@ export interface ModeDefinition {
   readonly id: string;
   readonly name: string;
   readonly fruits: readonly FruitDefinition[];
+  readonly foodCount: number;
+  readonly victoryCondition: VictoryCondition;
+  readonly tailCut: TailCutRule | null;
   /** 将下一格映射为实际目标格，例如以后实现穿墙模式。 */
   readonly resolveNextPosition: (next: Position, level: LevelDefinition) => Position;
   readonly calculatePoints: (food: Food, combo: number) => number;
@@ -62,17 +82,24 @@ export interface GameSnapshot extends RuleContext {
   readonly sessionId: number;
   readonly modeId: string;
   readonly status: GameStatus;
-  readonly food: Food | null;
+  readonly foods: readonly Food[];
+  readonly orderProgress: readonly OrderProgress[];
+  readonly exitActive: boolean;
+  readonly canCutTail: boolean;
+  readonly victoryCondition: VictoryCondition;
   readonly stepMs: number;
 }
 
 export type GameCommand =
-  | { readonly type: 'start' | 'restart' | 'pause' | 'resume' }
+  | { readonly type: 'start' | 'restart' | 'pause' | 'resume' | 'cut-tail' }
   | { readonly type: 'turn'; readonly direction: Direction };
 
 export type GameEvent =
   | { readonly type: 'session-started'; readonly sessionId: number }
   | { readonly type: 'status-changed'; readonly status: GameStatus }
+  | { readonly type: 'tail-cut'; readonly segments: readonly Position[] }
+  | { readonly type: 'exit-opened'; readonly exit: Position }
+  | { readonly type: 'level-completed'; readonly levelId: string; readonly score: number }
   | {
       readonly type: 'food-eaten';
       readonly food: Food;

@@ -101,8 +101,18 @@ export class EffectSystem {
           rainbow: true,
           lineWidth: 4,
         });
+      } else if (event.type === 'tail-cut') {
+        for (const segment of event.segments)
+          this.spawnParticles(segment.x, segment.y, COLORS.snakeBodyB, 12, {
+            secondColor: '#fff',
+            speedMul: 0.8,
+          });
+      } else if (event.type === 'exit-opened') {
+        this.spawnParticles(event.exit.x, event.exit.y, '#58bda0', 35, { secondColor: '#ffe58a' });
+        this.spawnShockwave(event.exit.x, event.exit.y, '#58bda0');
+        this.spawnFloatingText(event.exit.x, event.exit.y, 'EXIT!', '#23815e');
       } else if (event.type === 'game-ended') {
-        if (event.reason === 'completed') {
+        if (event.reason === 'completed' || event.reason === 'order-completed') {
           const head = snapshot.snake[0];
           if (head)
             this.spawnParticles(head.x, head.y, COLORS.snakeHead, 100, {

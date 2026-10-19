@@ -5,10 +5,16 @@ export interface PlayerSettings {
   readonly soundEnabled: boolean;
 }
 
+export interface CampaignProgress {
+  readonly completedLevelIds: readonly string[];
+}
+
 export interface StorageAdapter {
   load(): PlayerSettings;
   saveHighScore(score: number): void;
   saveSoundEnabled(enabled: boolean): void;
+  loadCampaignProgress(): CampaignProgress;
+  saveCampaignProgress(progress: CampaignProgress): void;
 }
 
 export interface AudioPort {
@@ -35,5 +41,18 @@ export interface GameView {
 }
 
 export type InputAction =
-  | { readonly type: 'primary' | 'toggle-pause' | 'pause' | 'toggle-sound' }
+  | {
+      readonly type:
+        | 'primary'
+        | 'toggle-pause'
+        | 'pause'
+        | 'toggle-sound'
+        | 'cut-tail'
+        | 'open-campaign'
+        | 'open-classic'
+        | 'home'
+        | 'level-select'
+        | 'next-level';
+    }
+  | { readonly type: 'select-level'; readonly levelId: string }
   | { readonly type: 'turn'; readonly direction: GameSnapshot['direction'] };

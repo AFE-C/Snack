@@ -186,7 +186,7 @@ describe('碰撞与胜利', () => {
     engine.dispatch({ type: 'start' });
     random.mockClear();
     expect(engine.step()).toContainEqual({ type: 'game-ended', reason: 'completed', score: 1 });
-    expect(engine.getSnapshot()).toMatchObject({ status: 'won', food: null, score: 1, combo: 1 });
+    expect(engine.getSnapshot()).toMatchObject({ status: 'won', foods: [], score: 1, combo: 1 });
     expect(random).not.toHaveBeenCalled();
   });
 
@@ -243,7 +243,7 @@ describe('食物和配置边界', () => {
   ])('随机权重 %s 选出 %s', (weightRandom, fruitType) => {
     const random = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(weightRandom);
     const engine = new GameEngine({ level: level(), mode: CLASSIC_MODE, random });
-    expect(engine.getSnapshot().food?.type).toBe(fruitType);
+    expect(engine.getSnapshot().foods[0]?.type).toBe(fruitType);
   });
 
   it('在任意空格采样时避开障碍与蛇身', () => {
@@ -256,8 +256,8 @@ describe('食物和配置边界', () => {
     const occupied = [...map.obstacles, ...map.initialSnake];
     for (const sample of [0, 0.25, 0.5, 0.99]) {
       const engine = new GameEngine({ level: map, mode: CLASSIC_MODE, random: () => sample });
-      const food = engine.getSnapshot().food;
-      expect(food).not.toBeNull();
+      const food = engine.getSnapshot().foods[0];
+      expect(food).toBeDefined();
       expect(occupied.some((point) => point.x === food?.x && point.y === food.y)).toBe(false);
     }
   });
@@ -270,7 +270,7 @@ describe('食物和配置边界', () => {
         { type: 'enabled', points: 1, color: '#000', weight: 1 },
       ],
     };
-    expect(game(level(), mode).getSnapshot().food?.type).toBe('enabled');
+    expect(game(level(), mode).getSnapshot().foods[0]?.type).toBe('enabled');
   });
 
   it.each([

@@ -79,6 +79,15 @@ describe('浏览器输入适配', () => {
     input.dispose();
   });
 
+  it('切换页面时清除未完成手势，不把旧滑动带入下一局', () => {
+    const { input, onAction, canvas } = setup();
+    pointer(canvas, 'pointerdown', 100, 100);
+    input.clearGesture();
+    pointer(canvas, 'pointerup', 200, 100);
+    expect(onAction).not.toHaveBeenCalled();
+    input.dispose();
+  });
+
   it('切后台发出暂停动作，销毁后所有监听器失效', () => {
     const { input, onAction, root, canvas } = setup();
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);

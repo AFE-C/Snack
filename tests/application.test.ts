@@ -56,6 +56,8 @@ function setup(
     load: () => settings,
     saveHighScore: vi.fn(),
     saveSoundEnabled: vi.fn(),
+    loadCampaignProgress: () => ({ completedLevelIds: [] }),
+    saveCampaignProgress: vi.fn(),
   };
   const clock = new TestClock();
   const app = new GameApplication({
