@@ -1,6 +1,7 @@
 import type { GameEngine } from '../core/engine';
 import type { GameCommand, GameEvent, GameSnapshot } from '../core/types';
 import type { AudioPort, FrameClock, GameView, InputAction, StorageAdapter } from './ports';
+import { selectAudioEvents } from './audio-feedback';
 
 const MAX_FRAME_DELTA_MS = 250;
 const MAX_STEPS_PER_FRAME = 5;
@@ -192,12 +193,14 @@ export class GameApplication {
           break;
         case 'tail-cut':
         case 'exit-opened':
+        case 'order-item-completed':
         case 'food-eaten':
         case 'combo-milestone':
           break;
       }
-      this.audio.play(event);
     }
+    for (const event of selectAudioEvents(events, snapshot.victoryCondition === 'orders-and-exit'))
+      this.audio.play(event);
     this.view.handleEvents(events, snapshot);
     this.updateHud();
   }

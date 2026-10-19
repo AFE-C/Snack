@@ -78,29 +78,33 @@ export class EffectSystem {
   }
 
   handleEvents(events: readonly GameEvent[], snapshot: GameSnapshot): void {
+    const campaign = snapshot.victoryCondition === 'orders-and-exit';
     for (const event of events) {
       if (event.type === 'food-eaten') {
         const food = event.food;
-        this.spawnParticles(food.x, food.y, food.color, 20, {
-          speedMul: 1.3,
-          sizeMul: 1.2,
+        this.spawnParticles(food.x, food.y, food.color, campaign ? 6 : 20, {
+          speedMul: campaign ? 0.8 : 1.3,
+          sizeMul: campaign ? 0.8 : 1.2,
           secondColor: '#ffd93d',
         });
-        this.spawnShockwave(food.x, food.y, food.color);
-        this.spawnFloatingText(food.x, food.y, '+' + event.points, food.color);
+        if (!campaign) {
+          this.spawnShockwave(food.x, food.y, food.color);
+          this.spawnFloatingText(food.x, food.y, '+' + event.points, food.color);
+        }
       } else if (event.type === 'combo-milestone') {
         const { food, level } = event;
-        this.shakeMs = 300;
-        this.spawnParticles(food.x, food.y, '#ff6b9d', 40 + level * 10, {
-          speedMul: 1.5 + level * 0.2,
-          sizeMul: 1.5,
+        if (!campaign) this.shakeMs = 300;
+        this.spawnParticles(food.x, food.y, '#ff6b9d', campaign ? 12 : 40 + level * 10, {
+          speedMul: campaign ? 1 : 1.5 + level * 0.2,
+          sizeMul: campaign ? 1 : 1.5,
           rainbow: true,
         });
-        this.spawnShockwave(food.x, food.y, '#ff6b9d', {
-          sizeMul: 2 + level * 0.5,
-          rainbow: true,
-          lineWidth: 4,
-        });
+        if (!campaign)
+          this.spawnShockwave(food.x, food.y, '#ff6b9d', {
+            sizeMul: 2 + level * 0.5,
+            rainbow: true,
+            lineWidth: 4,
+          });
       } else if (event.type === 'tail-cut') {
         for (const segment of event.segments)
           this.spawnParticles(segment.x, segment.y, COLORS.snakeBodyB, 12, {
@@ -108,9 +112,7 @@ export class EffectSystem {
             speedMul: 0.8,
           });
       } else if (event.type === 'exit-opened') {
-        this.spawnParticles(event.exit.x, event.exit.y, '#58bda0', 35, { secondColor: '#ffe58a' });
-        this.spawnShockwave(event.exit.x, event.exit.y, '#58bda0');
-        this.spawnFloatingText(event.exit.x, event.exit.y, 'EXIT!', '#23815e');
+        this.spawnParticles(event.exit.x, event.exit.y, '#58bda0', 10, { secondColor: '#ffe58a' });
       } else if (event.type === 'game-ended') {
         if (event.reason === 'completed' || event.reason === 'order-completed') {
           const head = snapshot.snake[0];

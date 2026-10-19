@@ -1,6 +1,7 @@
 import type { PlayerSettings } from '../app/ports';
-import type { GameSnapshot } from '../core/types';
+import type { GameEvent, GameSnapshot } from '../core/types';
 import { CAMPAIGN_LEVELS, FRUIT_ICONS, FRUIT_LABELS } from '../content/catalog';
+import { getRemainingOrder } from '../core/order';
 
 function requireElement<T extends HTMLElement>(root: ParentNode, selector: string): T {
   const element = root.querySelector<T>(selector);
@@ -27,6 +28,8 @@ export class GameUi {
   private bestScore = 0;
   private orderKey = '';
   private readonly orderNodes = new Map<string, HTMLElement>();
+  private feedbackRemainingMs = 0;
+  private feedbackPriority = 0;
 
   constructor(private readonly root: HTMLElement) {
     this.score = requireElement(root, '#score');
@@ -46,6 +49,7 @@ export class GameUi {
 
   updateHud(snapshot: GameSnapshot, settings: PlayerSettings): void {
     const campaign = snapshot.victoryCondition === 'orders-and-exit';
+    this.root.dataset.mode = campaign ? 'campaign' : 'classic';
     this.bestScore = settings.highScore;
     this.score.textContent = String(snapshot.score);
     this.best.textContent = String(campaign ? snapshot.snake.length : settings.highScore);
@@ -125,7 +129,7 @@ export class GameUi {
         ? '150ms / 步 · 无时间限制'
         : `本关得分: ${snapshot.score}`;
       this.hint.textContent = starting
-        ? '按任意顺序收集订单水果\n订单完成后，走进绿色出口\n长度达到 6 节可按 Q 断尾'
+        ? '优先收集带四角标记的水果\n收齐订单后，走进绿色出口\n长度达到 6 节可按 Q 断尾'
         : paused
           ? '进度已保留，继续完成这份订单'
           : won
@@ -165,18 +169,61 @@ export class GameUi {
         list.append(chip);
       }
     }
-    for (const item of snapshot.orderProgress) {
-      const chip = this.orderNodes.get(item.fruitType);
-      if (!chip) continue;
-      chip.textContent = `${FRUIT_ICONS[item.fruitType] ?? '🍬'} ${FRUIT_LABELS[item.fruitType] ?? item.fruitType} ${item.collected}/${item.required}`;
-      chip.dataset.complete = String(item.collected >= item.required);
+    const remaining = new Map(
+      getRemainingOrder(snapshot.orderProgress).map((item) => [item.fruitType, item.remaining]),
+    );
+    for (const [fruitType, chip] of this.orderNodes) {
+      const count = remaining.get(fruitType) ?? 0;
+      chip.hidden = count === 0;
+      chip.textContent = count > 0 ? `${FRUIT_ICONS[fruitType] ?? '🍬'} ×${count}` : '';
+      const label = `还缺${FRUIT_LABELS[fruitType] ?? fruitType} ${count} 个`;
+      chip.setAttribute('aria-label', label);
+      chip.title = label;
     }
+    requireElement(this.root, '#orderRow').hidden = snapshot.exitActive;
+    requireElement(this.root, '#orderReady').hidden = !snapshot.exitActive;
     const hint = requireElement(this.root, '#exitHint');
-    const text = snapshot.exitActive
-      ? '出口已点亮！走进绿色出口 →'
-      : '收齐订单，点亮出口 · 灰色出口可经过';
+    const text = snapshot.exitActive ? '出口已点亮 · 进入即可通关' : '四角标记 = 还缺的水果';
     if (hint.textContent !== text) hint.textContent = text;
     hint.dataset.active = String(snapshot.exitActive);
+  }
+
+  showCampaignFeedback(events: readonly GameEvent[]): void {
+    const completed = events.find((event) => event.type === 'order-item-completed');
+    const food = events.find((event) => event.type === 'food-eaten');
+    const milestone = events.find((event) => event.type === 'combo-milestone');
+    if (events.some((event) => event.type === 'exit-opened')) {
+      this.showFeedback('订单收齐 ✓', 4);
+    } else if (completed) {
+      this.showFeedback(`${FRUIT_LABELS[completed.fruitType] ?? completed.fruitType}收齐 ✓`, 3);
+    } else if (milestone) {
+      this.showFeedback(`连击 ×${milestone.combo}`, 2);
+    } else if (food) {
+      this.showFeedback(
+        food.combo > 1 ? `+${food.points} 分 · 连击 ×${food.combo}` : `+${food.points} 分`,
+        1,
+      );
+    }
+  }
+
+  private showFeedback(text: string, priority: number): void {
+    if (this.feedbackRemainingMs > 0 && priority < this.feedbackPriority) return;
+    const feedback = requireElement(this.root, '#campaignFeedback');
+    feedback.textContent = text;
+    feedback.dataset.kind = priority >= 3 ? 'completed' : 'score';
+    feedback.hidden = false;
+    requireElement(this.root, '#exitHint').hidden = true;
+    this.feedbackRemainingMs = 900;
+    this.feedbackPriority = priority;
+  }
+
+  private clearFeedback(): void {
+    const feedback = requireElement(this.root, '#campaignFeedback');
+    feedback.textContent = '';
+    feedback.hidden = true;
+    requireElement(this.root, '#exitHint').hidden = false;
+    this.feedbackRemainingMs = 0;
+    this.feedbackPriority = 0;
   }
 
   hideOverlay(): void {
@@ -197,12 +244,15 @@ export class GameUi {
   }
 
   update(deltaMs: number, shaking: boolean): void {
+    this.feedbackRemainingMs = Math.max(0, this.feedbackRemainingMs - deltaMs);
+    if (this.feedbackRemainingMs === 0 && this.feedbackPriority > 0) this.clearFeedback();
     this.popupRemainingMs = Math.max(0, this.popupRemainingMs - deltaMs);
     if (this.popupRemainingMs === 0) this.popup.classList.remove('show');
     if (!shaking) this.canvasWrap.classList.remove('shake');
   }
 
   reset(): void {
+    this.clearFeedback();
     this.popupRemainingMs = 0;
     this.popup.textContent = '';
     this.popup.classList.remove('show');

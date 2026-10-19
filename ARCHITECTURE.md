@@ -50,7 +50,11 @@ const snapshot = engine.getSnapshot();
 
 状态为 `start → playing ⇄ paused → gameover / won`。重试新建当前关局面和 `sessionId`，保留已完成关卡。暂停、恢复、重开和结束清空转向队列；断尾保留队列且不增加 tick。
 
-事件包括 `session-started`、`status-changed`、`food-eaten`、`combo-milestone`、`tail-cut`、`exit-opened`、`level-completed`、`game-ended`。`tail-cut` 带移除的段坐标，供表现层绘图；闯关 `game-ended.reason` 为 `order-completed`。只有进入激活出口才发 `level-completed`，应用据此保存进度。
+事件包括 `session-started`、`status-changed`、`food-eaten`、`combo-milestone`、`order-item-completed`、`tail-cut`、`exit-opened`、`level-completed`、`game-ended`。`order-item-completed` 携带 `fruitType`，仅在该类计数首次达到要求时触发；继续吃已收齐类型不会重复通知，重试重新计算。`tail-cut` 带移除的段坐标，供表现层绘图；闯关 `game-ended.reason` 为 `order-completed`。只有进入激活出口才发 `level-completed`，应用据此保存进度。
+
+`core/order.ts` 的 `getRemainingOrder` 从只读进度派生 `{ fruitType, remaining }` 列表，过滤已完成项，HUD 与 Canvas 共同使用。目标水果绘制固定角标和底衬，所有同类目标同时标记；不添加导航或优先路线，补货、断尾和重试后的快照直接决定标记。`GameSnapshot` 与存档格式不变。
+
+闯关 HUD 为需求预留 60px 两行空间，为反馈预留 24px；收齐项隐藏或切换出口提示时保持高度。短反馈使用 900ms 相对计时，暂停时传入 0，重开和销毁清除。收齐反馈优先于普通加分，出口反馈优先于单类收齐。闯关棋盘不画加分/连击飘字、不播放连击震动，只保留少量局部粒子；经典模式不变。
 
 每步依次消费转向、映射目标格、检查墙/障碍/身体、移动、进食计分、推进订单、补货、判断胜利。未进食时先排除本步移走的尾格。补货枚举有限空格，不使用“随机直到找到空格”的循环。
 
@@ -129,6 +133,7 @@ export const PRACTICE_MODE: ModeDefinition = {
 - 结算等待 800ms，使用局次绑定的相对时间，不使用旧局 `setTimeout`。导航销毁局、取消 RAF，并用会话标识拒绝旧局回调。
 - 转向队列最多两条，基于队尾判定重复和反向。键盘 repeat 被忽略。触屏支持单指/触控笔、取消与 30 CSS 像素阈值，小屏另有方向按钮。
 - 音频在用户操作后解锁；暂停、静音、销毁停止并断开音符。设备不可用不影响规则。
+- `app/audio-feedback.ts` 在闯关每批事件中只选一个主提示音，优先级为出口开启、单类收齐、连击、普通进食；技能与生命周期音效正常分发。所有事件仍完整发送给视图，经典音效不筛选。
 - `StorageAdapter` 提供设置读写与 `loadCampaignProgress` / `saveCampaignProgress`。浏览器实现捕获访问和写入异常；纯进度函数校验版本、id、连续顺序和重复记录。
 - 正式键为 `candySnakeHighScore`、`candySnakeSoundEnabled`、`candySnakeCampaignProgress`。进度 JSON 为 `{ "version": 1, "completedLevelIds": ["garden"] }`。
 - 协调器在内存保留进度，即使写入失败当前会话也能解锁；不保证禁用存储后的刷新恢复。经典最高分只在 `modeId === 'classic'` 结算时更新。
@@ -139,7 +144,7 @@ export const PRACTICE_MODE: ModeDefinition = {
 
 TypeScript 启用 strict、数组索引检查、精确可选属性、未使用符号及隐式返回检查。使用判别联合描述事件与动作，Prettier/EditorConfig/.gitattributes 统一格式和 LF；依赖版本与锁文件固定。
 
-提交前执行 `npm run check` 和 `npm run build`。原 70 项行为覆盖保留，新增订单、出口、断尾、关卡通关、进度和导航测试。`tests/helpers/campaign-run.ts` 通过公开快照与指令规划路线，不修改核心内部状态。
+提交前执行 `npm run check` 和 `npm run build`。此前 126 项回归用例保留，按新界面更新剩余需求展示断言，另增 20 项订单派生、收齐事件、目标标记、音效优先级与反馈生命周期测试，共 146 项。`tests/helpers/campaign-run.ts` 通过公开快照与指令规划路线，不修改核心内部状态。
 
 开发服务下的 `/tests/browser/index.html` 复用正式 DOM、渲染、应用和输入，用种子 42 与手动 `FrameClock` 检查浏览器完整三关流程。QA 存档加前缀，避免污染正式进度；生产入口不导入测试页。正式页面另外验证真实时钟、键盘、暂停、音效、触屏按钮和窄屏。
 

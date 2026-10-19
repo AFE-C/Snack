@@ -2,6 +2,8 @@ import { DIRECTION_VECTORS } from '../core/types';
 import type { GameSnapshot } from '../core/types';
 import { CELL_SIZE, COLORS } from './theme';
 import { drawFood } from './draw-food';
+import { drawTargetMarker } from './draw-target';
+import { getRemainingOrder } from '../core/order';
 import type { EffectSystem } from './effects';
 
 interface Star {
@@ -59,7 +61,12 @@ export class CanvasRenderer {
     this.drawBackground(snapshot);
     this.drawObstacles(snapshot);
     this.drawExit(snapshot);
-    for (const food of snapshot.foods) drawFood(this.ctx, food, CELL_SIZE, this.timeMs);
+    const campaign = snapshot.victoryCondition === 'orders-and-exit';
+    const needed = new Set(getRemainingOrder(snapshot.orderProgress).map((item) => item.fruitType));
+    for (const food of snapshot.foods) {
+      if (campaign && needed.has(food.type)) drawTargetMarker(this.ctx, food, CELL_SIZE);
+      drawFood(this.ctx, food, CELL_SIZE, this.timeMs, { animatedGlow: !campaign });
+    }
     this.drawSnake(snapshot);
     effects.draw(this.ctx);
   }

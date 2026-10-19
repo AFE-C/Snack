@@ -85,7 +85,7 @@ describe('闯关输入与界面', () => {
     const settings = { highScore: 99, soundEnabled: true };
     ui.updateHud(engine.getSnapshot(), settings);
     expect(root.querySelector('#recordLabel')?.textContent).toBe('长度');
-    expect(root.querySelector('#orderProgress')?.textContent).toContain('草莓 0/3');
+    expect(root.querySelector('[aria-label="还缺草莓 3 个"]')?.textContent).toContain('×3');
     expect(root.querySelector<HTMLButtonElement>('#cutTailBtn')?.disabled).toBe(true);
     ui.showOverlay(engine.getSnapshot(), false);
     expect(root.querySelector('#primaryBtn')?.textContent).toBe('开始本关');
@@ -95,8 +95,8 @@ describe('闯关输入与界面', () => {
     expect(root.querySelector('#overlayTitle')?.textContent).toBe('三关完成！');
     expect(root.querySelector('#primaryBtn')?.textContent).toBe('返回选关');
     expect(root.querySelector('#exitHint')?.textContent).toContain('出口已点亮');
-    expect(root.querySelector('#orderProgress')?.textContent).toContain('西瓜 1/1');
-    expect(root.querySelectorAll('[data-complete="true"]')).toHaveLength(4);
+    expect(root.querySelector('#orderReady')?.textContent).toContain('前往绿色出口');
+    expect(root.querySelectorAll('.order-chip:not([hidden])')).toHaveLength(0);
     expect(root.querySelector('#highScore')?.textContent).toBe(
       String(result.snapshot.snake.length),
     );

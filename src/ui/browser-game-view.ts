@@ -26,6 +26,10 @@ export class BrowserGameView implements GameView {
 
   handleEvents(events: readonly GameEvent[], snapshot: GameSnapshot): void {
     this.effects.handleEvents(events, snapshot);
+    if (snapshot.victoryCondition === 'orders-and-exit') {
+      this.ui.showCampaignFeedback(events);
+      return;
+    }
     for (const event of events) {
       if (event.type === 'food-eaten' && event.combo > 1) {
         this.ui.showCombo(event.combo, event.combo % 10 === 0);

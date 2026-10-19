@@ -104,11 +104,13 @@ export class GameEngine {
       events.push({ type: 'food-eaten', food, points, combo });
       if (combo % 10 === 0)
         events.push({ type: 'combo-milestone', food, combo, level: combo / 10 });
-      orderProgress = orderProgress.map((item) =>
-        item.fruitType === food.type
-          ? { ...item, collected: Math.min(item.required, item.collected + 1) }
-          : item,
-      );
+      orderProgress = orderProgress.map((item) => {
+        if (item.fruitType !== food.type || item.collected >= item.required) return item;
+        const collected = item.collected + 1;
+        if (collected === item.required)
+          events.push({ type: 'order-item-completed', fruitType: item.fruitType });
+        return { ...item, collected };
+      });
     }
     const exitActive = this.isOrderComplete(orderProgress);
     if (exitActive && !this.state.exitActive && this.level.exit) {

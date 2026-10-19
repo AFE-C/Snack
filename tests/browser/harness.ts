@@ -4,6 +4,7 @@ import markup from '../../index.html?raw';
 import { GameApplication } from '../../src/app/game-application';
 import { GameCoordinator } from '../../src/app/game-coordinator';
 import { GameEngine } from '../../src/core/engine';
+import { getRemainingOrder } from '../../src/core/order';
 import { BrowserAudio } from '../../src/platform/browser-audio';
 import { BrowserStorage } from '../../src/platform/browser-storage';
 import { InputController } from '../../src/platform/input-controller';
@@ -86,7 +87,11 @@ function driver() {
 function refresh(): void {
   const state = active?.getSnapshot();
   output.textContent = state
-    ? `${state.level.id} | ${state.status} | tick ${state.tick}\n分数 ${state.score} · 连击 ${state.combo} · 长度 ${state.snake.length}\n出口 ${state.exitActive ? '开启' : '未开启'} · 可断尾 ${state.canCutTail}\n${state.orderProgress.map((item) => `${item.fruitType} ${item.collected}/${item.required}`).join(' · ')}\n动画循环 ${clock.callbacks.size}`
+    ? `${state.level.id} | ${state.status} | tick ${state.tick}\n分数 ${state.score} · 连击 ${state.combo} · 长度 ${state.snake.length}\n出口 ${state.exitActive ? '开启' : '未开启'} · 可断尾 ${state.canCutTail}\n${state.orderProgress.map((item) => `${item.fruitType} ${item.collected}/${item.required}`).join(' · ')}\n剩余 ${
+        getRemainingOrder(state.orderProgress)
+          .map((item) => `${item.fruitType}×${item.remaining}`)
+          .join(' · ') || '无'
+      }\n动画循环 ${clock.callbacks.size}`
     : '请选择模式和关卡';
 }
 function button(label: string, action: () => void): void {
@@ -130,6 +135,7 @@ function collectTo(length: number): void {
 }
 button('收集到 6 节', () => collectTo(6));
 button('收集到 9 节', () => collectTo(9));
+button('收集一颗水果', () => collectTo(getActive().getSnapshot().snake.length + 1));
 button('前进一步 150ms', () => {
   getActive();
   clock.advance(150);

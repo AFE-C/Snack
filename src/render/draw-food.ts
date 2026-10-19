@@ -6,6 +6,7 @@ export function drawFood(
   food: Food | null,
   GRID: number,
   time: number,
+  options: { readonly animatedGlow?: boolean } = {},
 ): void {
   if (!food) return;
 
@@ -14,14 +15,16 @@ export function drawFood(
   const y = fy;
 
   // 像素光晕（十字星）
-  const glowAlpha = 0.25 + 0.1 * Math.sin(time * 0.08);
-  ctx.globalAlpha = glowAlpha;
-  ctx.fillStyle = food.color;
-  ctx.fillRect(fx + GRID / 2 - 1, y + 2, 2, GRID - 4);
-  ctx.fillRect(fx + 2, y + GRID / 2 - 1, GRID - 4, 2);
-  ctx.fillRect(fx + GRID / 2 - 2, y + 4, 4, GRID - 8);
-  ctx.fillRect(fx + 4, y + GRID / 2 - 2, GRID - 8, 4);
-  ctx.globalAlpha = 1;
+  if (options.animatedGlow !== false) {
+    const glowAlpha = 0.25 + 0.1 * Math.sin(time * 0.08);
+    ctx.globalAlpha = glowAlpha;
+    ctx.fillStyle = food.color;
+    ctx.fillRect(fx + GRID / 2 - 1, y + 2, 2, GRID - 4);
+    ctx.fillRect(fx + 2, y + GRID / 2 - 1, GRID - 4, 2);
+    ctx.fillRect(fx + GRID / 2 - 2, y + 4, 4, GRID - 8);
+    ctx.fillRect(fx + 4, y + GRID / 2 - 2, GRID - 8, 4);
+    ctx.globalAlpha = 1;
+  }
 
   if (food.type === 'strawberry') {
     // 草莓 - 像素风

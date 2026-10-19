@@ -78,7 +78,11 @@ describe('表现层生命周期', () => {
     audio.setPaused(false);
     audio.play({ type: 'session-started', sessionId: 3 });
     expect(oscillators).toHaveLength(6);
+    audio.play({ type: 'order-item-completed', fruitType: 'grape' });
+    expect(oscillators).toHaveLength(8);
     audio.setEnabled(false);
+    audio.play({ type: 'order-item-completed', fruitType: 'orange' });
+    expect(oscillators).toHaveLength(8);
     expect(oscillators.every((voice) => voice.disconnect.mock.calls.length > 0)).toBe(true);
     audio.dispose();
     audio.dispose();

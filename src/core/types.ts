@@ -99,6 +99,7 @@ export type GameEvent =
   | { readonly type: 'status-changed'; readonly status: GameStatus }
   | { readonly type: 'tail-cut'; readonly segments: readonly Position[] }
   | { readonly type: 'exit-opened'; readonly exit: Position }
+  | { readonly type: 'order-item-completed'; readonly fruitType: string }
   | { readonly type: 'level-completed'; readonly levelId: string; readonly score: number }
   | {
       readonly type: 'food-eaten';

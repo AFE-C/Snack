@@ -71,8 +71,26 @@
           </div>
         </div>
         <section id="campaignHud" class="campaign-hud" aria-label="当前订单" hidden>
-          <div id="orderProgress" class="order-progress"></div>
-          <p id="exitHint" class="exit-hint" role="status" aria-live="polite">完成订单，点亮出口</p>
+          <div class="order-slots">
+            <div id="orderRow" class="order-row">
+              <span class="order-label">还缺</span>
+              <div id="orderProgress" class="order-progress"></div>
+            </div>
+            <p id="orderReady" class="order-ready" hidden>订单收齐 · 前往绿色出口 →</p>
+          </div>
+          <div class="order-status">
+            <p id="exitHint" class="exit-hint" role="status" aria-live="polite">
+              四角标记 = 还缺的水果
+            </p>
+            <p
+              id="campaignFeedback"
+              class="campaign-feedback"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              hidden
+            ></p>
+          </div>
         </section>
         <div class="canvas-wrap" id="canvasWrap">
           <canvas
@@ -80,7 +98,7 @@
             width="400"
             height="400"
             tabindex="0"
-            aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。"
+            aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。闯关时四角标记表示还缺的水果。"
             >请使用支持 Canvas 的浏览器游玩。</canvas
           >
           <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
