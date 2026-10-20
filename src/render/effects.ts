@@ -111,6 +111,12 @@ export class EffectSystem {
             secondColor: '#fff',
             speedMul: 0.8,
           });
+      } else if (event.type === 'terrain-broken') {
+        for (const point of event.positions)
+          this.spawnParticles(point.x, point.y, '#ab795b', 8, {
+            secondColor: '#ffe0a2',
+            speedMul: 0.7,
+          });
       } else if (event.type === 'exit-opened') {
         this.spawnParticles(event.exit.x, event.exit.y, '#58bda0', 10, { secondColor: '#ffe58a' });
       } else if (event.type === 'game-ended') {

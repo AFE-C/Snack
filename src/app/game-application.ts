@@ -14,6 +14,7 @@ interface ApplicationOptions {
   readonly storage: StorageAdapter;
   readonly clock: FrameClock;
   readonly onLevelCompleted?: (levelId: string) => void;
+  readonly onGameEnded?: (snapshot: GameSnapshot) => void;
 }
 
 /** 协调游戏与外设；一生只持有一个 RAF，重开只替换当前局的数据。 */
@@ -24,6 +25,7 @@ export class GameApplication {
   private readonly storage: StorageAdapter;
   private readonly clock: FrameClock;
   private readonly onLevelCompleted: ((levelId: string) => void) | undefined;
+  private readonly onGameEnded: ((snapshot: GameSnapshot) => void) | undefined;
   private highScore: number;
   private soundEnabled: boolean;
   private frameId: number | null = null;
@@ -41,6 +43,7 @@ export class GameApplication {
     this.storage = options.storage;
     this.clock = options.clock;
     this.onLevelCompleted = options.onLevelCompleted;
+    this.onGameEnded = options.onGameEnded;
     const settings = this.storage.load();
     this.highScore = settings.highScore;
     this.soundEnabled = settings.soundEnabled;
@@ -152,6 +155,7 @@ export class GameApplication {
     }
     const snapshot = this.getSnapshot();
     this.view.draw(snapshot, snapshot.status === 'paused' ? 0 : deltaMs);
+    this.audio.update?.(snapshot.status === 'paused' ? 0 : deltaMs, snapshot);
     this.scheduleFrame();
   };
 
@@ -187,6 +191,7 @@ export class GameApplication {
             this.storage.saveHighScore(this.highScore);
           }
           this.pendingEnd = { sessionId: snapshot.sessionId, elapsedMs: 0 };
+          this.onGameEnded?.(snapshot);
           break;
         case 'level-completed':
           this.onLevelCompleted?.(event.levelId);

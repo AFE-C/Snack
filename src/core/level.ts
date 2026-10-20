@@ -25,7 +25,11 @@ export function prepareLevel(source: LevelDefinition): LevelDefinition {
   }
   if (source.initialSnake.length === 0) fail('至少需要一节蛇身');
   const occupied = new Set<string>();
-  for (const position of [...source.obstacles, ...source.initialSnake]) {
+  for (const position of [
+    ...source.obstacles,
+    ...(source.fragileObstacles ?? []),
+    ...source.initialSnake,
+  ]) {
     if (!isGridPosition(position) || !isInside(position, source)) fail('障碍或蛇身超出棋盘');
     const key = positionKey(position);
     if (occupied.has(key)) fail('障碍或蛇身发生重叠');
@@ -72,7 +76,9 @@ export function prepareLevel(source: LevelDefinition): LevelDefinition {
       fruitTypes.add(item.fruitType);
     }
     // 所有可走格都应从出生点可达，避免水果刷在封闭区域。
-    const walls = new Set(source.obstacles.map(positionKey));
+    const walls = new Set(
+      [...source.obstacles, ...(source.fragileObstacles ?? [])].map(positionKey),
+    );
     const reached = new Set<string>();
     const pending: Position[] = head ? [head] : [];
     for (let index = 0; index < pending.length; index += 1) {
@@ -96,6 +102,13 @@ export function prepareLevel(source: LevelDefinition): LevelDefinition {
   return Object.freeze({
     ...source,
     obstacles: Object.freeze(source.obstacles.map((point) => Object.freeze({ ...point }))),
+    ...(source.fragileObstacles
+      ? {
+          fragileObstacles: Object.freeze(
+            source.fragileObstacles.map((point) => Object.freeze({ ...point })),
+          ),
+        }
+      : {}),
     initialSnake: Object.freeze(source.initialSnake.map((point) => Object.freeze({ ...point }))),
     ...(source.order
       ? { order: Object.freeze(source.order.map((item) => Object.freeze({ ...item }))) }

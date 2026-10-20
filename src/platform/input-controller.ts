@@ -1,5 +1,6 @@
 import type { InputAction } from '../app/ports';
 import type { Direction } from '../core/types';
+import { SKILL_IDS, UPGRADE_IDS } from '../core/expedition';
 
 const SWIPE_THRESHOLD_PX = 30;
 const KEY_DIRECTIONS: Readonly<Record<string, Direction>> = {
@@ -30,6 +31,7 @@ export class InputController {
     this.options = options;
     options.document.addEventListener('keydown', this.onKeyDown);
     options.document.addEventListener('visibilitychange', this.onVisibilityChange);
+    options.document.addEventListener('candy:pause', this.onPlatformPause);
     options.root.addEventListener('click', this.onClick);
     options.canvas.addEventListener('pointerdown', this.onPointerDown);
     options.canvas.addEventListener('pointerup', this.onPointerUp);
@@ -42,6 +44,7 @@ export class InputController {
     const { document, root, canvas } = this.options;
     document.removeEventListener('keydown', this.onKeyDown);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    document.removeEventListener('candy:pause', this.onPlatformPause);
     root.removeEventListener('click', this.onClick);
     canvas.removeEventListener('pointerdown', this.onPointerDown);
     canvas.removeEventListener('pointerup', this.onPointerUp);
@@ -73,7 +76,10 @@ export class InputController {
     const direction = KEY_DIRECTIONS[key];
     if (direction) {
       event.preventDefault();
-      if (!event.repeat) this.options.onAction({ type: 'turn', direction });
+      const menu =
+        this.options.root.dataset.screen && this.options.root.dataset.screen !== 'playScreen';
+      if (!event.repeat)
+        this.options.onAction({ type: menu ? 'navigate-menu' : 'turn', direction });
     } else if (key === ' ' || key === 'enter') {
       event.preventDefault();
       if (!event.repeat) this.options.onAction({ type: 'primary' });
@@ -107,8 +113,21 @@ export class InputController {
       case 'open-classic':
       case 'level-select':
       case 'next-level':
+      case 'open-expedition':
+      case 'resume-expedition':
+      case 'toggle-fullscreen':
         this.options.onAction({ type: control.dataset.action });
         break;
+      case 'select-skill': {
+        const skillId = SKILL_IDS.find((id) => id === control.dataset.skillId);
+        if (skillId) this.options.onAction({ type: 'select-skill', skillId });
+        break;
+      }
+      case 'choose-upgrade': {
+        const upgradeId = UPGRADE_IDS.find((id) => id === control.dataset.upgradeId);
+        if (upgradeId) this.options.onAction({ type: 'choose-upgrade', upgradeId });
+        break;
+      }
       case 'select-level':
         if (control.dataset.levelId)
           this.options.onAction({ type: 'select-level', levelId: control.dataset.levelId });
@@ -162,5 +181,9 @@ export class InputController {
       this.touch = null;
       this.options.onAction({ type: 'pause' });
     }
+  };
+  private readonly onPlatformPause = (): void => {
+    this.clearGesture();
+    this.options.onAction({ type: 'pause' });
   };
 }

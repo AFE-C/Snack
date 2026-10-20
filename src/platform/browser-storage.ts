@@ -4,6 +4,7 @@ import { parseCampaignProgress } from '../app/campaign-progress';
 export const HIGH_SCORE_KEY = 'candySnakeHighScore';
 export const SOUND_ENABLED_KEY = 'candySnakeSoundEnabled';
 export const CAMPAIGN_PROGRESS_KEY = 'candySnakeCampaignProgress';
+export const EXPEDITION_KEY = 'candySnakeExpedition';
 
 export type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -39,6 +40,13 @@ export class BrowserStorage implements StorageAdapter {
       CAMPAIGN_PROGRESS_KEY,
       JSON.stringify({ version: 1, completedLevelIds: validated.completedLevelIds }),
     );
+  }
+
+  loadExpedition(): string | null {
+    return this.read(EXPEDITION_KEY);
+  }
+  saveExpedition(raw: string): void {
+    this.write(EXPEDITION_KEY, raw);
   }
 
   private read(key: string): string | null {

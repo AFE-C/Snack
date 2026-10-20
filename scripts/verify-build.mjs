@@ -16,6 +16,14 @@ assert(
   '发布 HTML 应包含实时订单提示',
 );
 assert(!html.includes('candySnakeQa:') && !html.includes('qaState'), '发布 HTML 不应包含验收夹具');
+assert(
+  html.includes('糖果远征') && html.includes('skill-used') && html.includes('candySnakeExpedition'),
+  '发布 HTML 应包含远征和独立存档',
+);
+assert(
+  !html.includes('expeditionQaState') && !html.includes('MediaRecorder'),
+  '发布 HTML 不应包含录像或验收驱动',
+);
 console.log(
   `发布资源检查通过：${Buffer.byteLength(html)} 字节；脚本、样式与字体已内嵌，测试夹具未打包。`,
 );

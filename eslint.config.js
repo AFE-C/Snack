@@ -4,10 +4,16 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'work/**'] },
   eslint.configs.recommended,
   tseslint.configs.recommended,
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  {
+    files: ['desktop/**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs' },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  { files: ['desktop/main.cjs'], languageOptions: { globals: { window: 'off', document: 'off' } } },
   {
     files: ['**/*.ts'],
     rules: {

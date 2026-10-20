@@ -8,15 +8,25 @@ import { BrowserStorage } from './platform/browser-storage';
 import { InputController } from './platform/input-controller';
 import { BrowserGameView } from './ui/browser-game-view';
 import { MenuUi } from './ui/menu-ui';
+import { ExpeditionController } from './app/expedition-controller';
+import { ExpeditionUi } from './ui/expedition-ui';
+import { GamepadInput, navigateMenu } from './platform/gamepad';
+import type { InputAction } from './app/ports';
 
 function bootstrap(): () => void {
   const root = document.querySelector<HTMLElement>('#gameRoot');
   const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
   if (!root || !canvas) throw new Error('游戏页面缺少必要元素');
-  const storage = new BrowserStorage(() => window.localStorage);
+  const storage = new BrowserStorage(() => window.candyDesktop ?? window.localStorage);
+  const menu = new MenuUi(root);
+  const clock = {
+    requestFrame: (callback: (timestamp: number) => void) => requestAnimationFrame(callback),
+    cancelFrame: (id: number) => cancelAnimationFrame(id),
+  };
+  let expedition: ExpeditionController | null = null;
   const coordinator = new GameCoordinator(
     storage,
-    new MenuUi(root),
+    menu,
     (level, mode, onLevelCompleted) =>
       new GameApplication({
         engine: new GameEngine({ level, mode }),
@@ -24,32 +34,92 @@ function bootstrap(): () => void {
         audio: new BrowserAudio(),
         storage,
         onLevelCompleted,
-        clock: {
-          requestFrame: (callback) => requestAnimationFrame(callback),
-          cancelFrame: (id) => cancelAnimationFrame(id),
-        },
+        clock,
       }),
   );
+  const isMenu = () =>
+    root.dataset.screen !== 'playScreen' || !root.querySelector<HTMLElement>('#overlay')?.hidden;
+  const handleAction = (action: InputAction) => {
+    if (action.type === 'primary' && root.dataset.screen !== 'playScreen') {
+      navigateMenu(root, { type: 'activate-menu' });
+      return;
+    }
+    if (action.type === 'toggle-pause' && root.dataset.screen !== 'playScreen') {
+      handleAction({ type: 'home' });
+      return;
+    }
+    if (action.type === 'navigate-menu' || action.type === 'activate-menu') {
+      navigateMenu(root, action);
+      return;
+    }
+    if (action.type === 'back-menu') {
+      if (
+        root.dataset.screen === 'playScreen' &&
+        !root.querySelector<HTMLButtonElement>('#pauseBtn')?.disabled
+      )
+        handleAction({ type: 'toggle-pause' });
+      else handleAction({ type: 'home' });
+      return;
+    }
+    if (action.type === 'toggle-fullscreen') {
+      if (window.candyDesktop) window.candyDesktop.toggleFullscreen();
+      else
+        void (
+          document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen?.()
+        )?.catch(() => {
+          const button = root.querySelector<HTMLElement>('.fullscreen-button');
+          if (button) button.textContent = '请用浏览器 F11 全屏';
+        });
+      return;
+    }
+    const navigation = [
+      'home',
+      'open-classic',
+      'open-campaign',
+      'level-select',
+      'select-level',
+      'open-expedition',
+      'resume-expedition',
+    ].includes(action.type);
+    if (navigation) input.clearGesture();
+    if (action.type === 'open-expedition' || action.type === 'resume-expedition') {
+      expedition?.dispose();
+      coordinator.handleAction({ type: 'home' });
+      expedition = new ExpeditionController(
+        storage,
+        new ExpeditionUi(root),
+        (engine, run, onGameEnded) =>
+          new GameApplication({
+            engine,
+            storage,
+            clock,
+            onGameEnded,
+            view: new BrowserGameView(root, canvas, run),
+            audio: new BrowserAudio(undefined, true),
+          }),
+      );
+      expedition.open(action.type === 'resume-expedition');
+    } else if (navigation) {
+      expedition?.dispose();
+      expedition = null;
+      coordinator.handleAction(action);
+      menu.updateContinue(storage.loadExpedition());
+    } else if (expedition) expedition.handleAction(action);
+    else coordinator.handleAction(action);
+  };
   const input = new InputController({
     document,
     root,
     canvas,
-    onAction: (action) => {
-      if (
-        action.type === 'primary' ||
-        action.type === 'home' ||
-        action.type === 'open-classic' ||
-        action.type === 'open-campaign' ||
-        action.type === 'level-select' ||
-        action.type === 'select-level' ||
-        action.type === 'next-level'
-      )
-        input.clearGesture();
-      coordinator.handleAction(action);
-    },
+    onAction: handleAction,
   });
+  const gamepad = new GamepadInput(handleAction, isMenu);
+  gamepad.mount();
   coordinator.mount();
+  menu.updateContinue(storage.loadExpedition());
   return () => {
+    gamepad.dispose();
+    expedition?.dispose();
     input.dispose();
     coordinator.dispose();
   };

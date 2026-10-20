@@ -17,5 +17,9 @@ export function selectAudioEvents(
   const dominant = CUE_PRIORITY.map((type) => events.find((event) => event.type === type)).find(
     (event) => event !== undefined,
   );
-  return events.filter((event) => !CUE_TYPES.has(event.type) || event === dominant);
+  return events.filter(
+    (event) =>
+      (event.type !== 'tail-cut' || !events.some((item) => item.type === 'skill-used')) &&
+      (!CUE_TYPES.has(event.type) || event === dominant),
+  );
 }

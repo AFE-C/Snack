@@ -30,7 +30,11 @@ export function nextRoute(snapshot: GameSnapshot): Direction[] | null {
       : snapshot.foods.filter((food) => needed.has(food.type));
   const goals = new Set(targets.map(positionKey));
   const occupied = new Set(
-    [...snapshot.level.obstacles, ...snapshot.snake.slice(0, -1)].map(positionKey),
+    [
+      ...snapshot.level.obstacles,
+      ...(snapshot.fragileObstacles ?? []),
+      ...(snapshot.growthPending ? snapshot.snake : snapshot.snake.slice(0, -1)),
+    ].map(positionKey),
   );
   // 避免沿路误吃非目标水果，让测试路线只验证有意的收集。
   for (const food of snapshot.foods)
@@ -70,11 +74,18 @@ function routeWithMovingBody(
   snapshot: GameSnapshot,
   goals: ReadonlySet<string>,
 ): Direction[] | null {
-  const walls = new Set(snapshot.level.obstacles.map(positionKey));
+  const walls = new Set(
+    [...snapshot.level.obstacles, ...(snapshot.fragileObstacles ?? [])].map(positionKey),
+  );
   for (const food of snapshot.foods)
     if (!goals.has(positionKey(food))) walls.add(positionKey(food));
   const queue = [
-    { snake: snapshot.snake, direction: snapshot.direction, route: [] as Direction[] },
+    {
+      snake: snapshot.snake,
+      direction: snapshot.direction,
+      route: [] as Direction[],
+      growth: snapshot.growthPending ?? 0,
+    },
   ];
   const visited = new Set<string>();
   for (let index = 0; index < queue.length && index < 50000; index += 1) {
@@ -91,7 +102,9 @@ function routeWithMovingBody(
       const next = { x: head.x + offset.x, y: head.y + offset.y };
       const key = positionKey(next);
       const eating = snapshot.foods.some((food) => positionKey(food) === key);
-      const body = eating ? node.snake : node.snake.slice(0, -1);
+      const grows =
+        (eating || node.growth > 0) && (snapshot.modeId !== 'expedition' || node.snake.length < 12);
+      const body = grows ? node.snake : node.snake.slice(0, -1);
       if (
         next.x < 0 ||
         next.x >= snapshot.level.cols ||
@@ -105,7 +118,12 @@ function routeWithMovingBody(
       const stateKey = `${direction}:${snake.map(positionKey).join(';')}`;
       if (visited.has(stateKey)) continue;
       visited.add(stateKey);
-      queue.push({ snake, direction, route: [...node.route, direction] });
+      queue.push({
+        snake,
+        direction,
+        route: [...node.route, direction],
+        growth: Math.max(0, node.growth - (grows && !eating ? 1 : 0)),
+      });
     }
   }
   return null;

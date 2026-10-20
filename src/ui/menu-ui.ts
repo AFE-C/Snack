@@ -2,6 +2,7 @@ import type { NavigationView } from '../app/game-coordinator';
 import { isLevelUnlocked } from '../app/campaign-progress';
 import type { CampaignProgress, PlayerSettings } from '../app/ports';
 import { CAMPAIGN_LEVELS, FRUIT_ICONS, FRUIT_LABELS } from '../content/catalog';
+import { parseRun } from '../app/expedition-run';
 
 const LEVEL_DESCRIPTIONS: Readonly<Record<string, string>> = {
   garden: '开阔草地，学着收齐第一份订单。',
@@ -63,7 +64,22 @@ export class MenuUi implements NavigationView {
     this.show('playScreen');
   }
 
+  updateContinue(raw: string | null): void {
+    const run = parseRun(raw);
+    const button = this.root.querySelector<HTMLElement>('#resumeExpedition');
+    if (button) {
+      button.hidden = !run || run.phase === 'won' || run.phase === 'lost';
+      button.textContent = run
+        ? `继续远征 · 房间 ${run.roomIndex + 1} / 6 · ${run.hearts} 颗心`
+        : '继续远征';
+    }
+  }
+
   private show(id: string): void {
+    this.root.dataset.screen = id;
+    this.root.querySelector<HTMLElement>('#expeditionHud')?.setAttribute('hidden', '');
+    for (const screen of this.root.querySelectorAll<HTMLElement>('[data-screen]'))
+      screen.hidden = screen.id !== id;
     for (const screen of ['homeScreen', 'levelScreen', 'playScreen'])
       this.element(screen).hidden = screen !== id;
     this.element('overlay').hidden = true;

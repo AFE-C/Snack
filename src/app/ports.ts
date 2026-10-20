@@ -1,4 +1,5 @@
 import type { GameEvent, GameSnapshot } from '../core/types';
+import type { SkillId, UpgradeId } from '../core/expedition';
 
 export interface PlayerSettings {
   readonly highScore: number;
@@ -15,6 +16,8 @@ export interface StorageAdapter {
   saveSoundEnabled(enabled: boolean): void;
   loadCampaignProgress(): CampaignProgress;
   saveCampaignProgress(progress: CampaignProgress): void;
+  loadExpedition?(): string | null;
+  saveExpedition?(raw: string): void;
 }
 
 export interface AudioPort {
@@ -22,6 +25,7 @@ export interface AudioPort {
   setEnabled(enabled: boolean): void;
   setPaused(paused: boolean): void;
   play(event: GameEvent): void;
+  update?(deltaMs: number, snapshot: GameSnapshot): void;
   dispose(): void;
 }
 
@@ -54,5 +58,10 @@ export type InputAction =
         | 'level-select'
         | 'next-level';
     }
+  | { readonly type: 'open-expedition' | 'resume-expedition' | 'toggle-fullscreen' }
+  | { readonly type: 'select-skill'; readonly skillId: SkillId }
+  | { readonly type: 'choose-upgrade'; readonly upgradeId: UpgradeId }
+  | { readonly type: 'navigate-menu'; readonly direction: GameSnapshot['direction'] }
+  | { readonly type: 'activate-menu' | 'back-menu' }
   | { readonly type: 'select-level'; readonly levelId: string }
   | { readonly type: 'turn'; readonly direction: GameSnapshot['direction'] };

@@ -6,130 +6,282 @@
     <meta name="theme-color" content="#ff6b9d" />
     <meta
       name="description"
-      content="糖果贪吃蛇：收集订单、穿过巧克力墙，用断尾技能闯过三关，也能挑战经典最高分。"
+      content="糖果工坊试玩版：实时规划路线，用断尾施放三种配方，选择九项升级，完成六房间远征。保留经典与三关闯关。"
     />
     <title>Candy Snake - 糖果贪吃蛇</title>
   </head>
   <body>
     <main class="game-container" id="gameRoot" aria-label="糖果贪吃蛇">
-      <h1 class="game-title">🍬 CANDY SNAKE 🍭</h1>
-      <section id="homeScreen" class="menu-screen" aria-labelledby="homeTitle">
-        <p class="menu-art" aria-hidden="true">🍓 🍬 🍊</p>
-        <h2 id="homeTitle">拐个弯，去糖果世界</h2>
-        <p class="menu-intro">收集水果订单，找到亮起的出口。<br />身体太长？断尾腾出一条路。</p>
-        <button class="pixel-btn mode-button" data-action="open-campaign" type="button">
-          糖果闯关<span>三张地图 · 订单收集 · Q 断尾</span>
+      <header class="stage-header">
+        <h1 class="game-title">CANDY SNAKE<span>糖果工坊 · 试玩版</span></h1>
+        <button class="text-btn fullscreen-button" data-action="toggle-fullscreen" type="button">
+          ⛶ 全屏
         </button>
-        <button class="secondary-btn mode-button" data-action="open-classic" type="button">
-          经典模式<span>20 × 20 棋盘 · 挑战最高分</span>
-        </button>
-        <p id="homeProgress" class="menu-note"></p>
+      </header>
+      <section
+        id="homeScreen"
+        class="menu-screen home-screen"
+        data-screen
+        aria-labelledby="homeTitle"
+      >
+        <div class="home-copy">
+          <p class="chapter-label">巧克力工坊的第一天</p>
+          <h2 id="homeTitle">把身体，<br />变成下一条路。</h2>
+          <p class="menu-intro">收集糖果，绕过自己的尾巴。<br />舍下三节身体，施放你的独家配方。</p>
+          <button class="pixel-btn expedition-start" data-action="open-expedition" type="button">
+            开始糖果远征 <span>六个房间 · 三种配方 · 每局不同的升级</span>
+          </button>
+          <button
+            class="secondary-btn resume-button"
+            id="resumeExpedition"
+            data-action="resume-expedition"
+            type="button"
+            hidden
+          >
+            继续远征
+          </button>
+          <div class="legacy-modes">
+            <button class="pixel-btn mode-button" data-action="open-campaign" type="button">
+              糖果闯关<span>三张地图 · 订单收集 · Q 断尾</span>
+            </button>
+            <button class="secondary-btn mode-button" data-action="open-classic" type="button">
+              经典模式<span>20 × 20 棋盘 · 挑战最高分</span>
+            </button>
+            <p id="homeProgress" class="menu-note"></p>
+          </div>
+        </div>
+        <div class="workshop-art" aria-hidden="true">
+          <svg viewBox="0 0 600 560" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="floorTiles" width="60" height="60" patternUnits="userSpaceOnUse">
+                <path d="M0 0h60v60H0z" fill="#f2d7b9" />
+                <path d="M0 0h30v30H0zm30 30h30v30H30z" fill="#f8e6cd" />
+              </pattern>
+            </defs>
+            <path d="M40 100L335 25l230 145v265L265 530 40 380z" fill="#ba7c65" />
+            <path d="M40 100l225 145 300-75v255l-300 95L40 375z" fill="url(#floorTiles)" />
+            <path d="M40 100v275l225 145V245z" fill="#eed0c1" opacity=".55" />
+            <path d="M45 374l220 140 297-93" fill="none" stroke="#734936" stroke-width="12" />
+            <path
+              d="M92 330l105 64 108-30 85 52 111-34"
+              fill="none"
+              stroke="#639d81"
+              stroke-width="56"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M92 318l105 64 108-30 85 52 111-34"
+              fill="none"
+              stroke="#9bd9ad"
+              stroke-width="43"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M110 326l15 8m31 18 15 8m50-5 15-4m35-10 15-4m37 15 15 9m29 18 15 8m47-5 15-4"
+              stroke="#61b991"
+              stroke-width="6"
+            />
+            <path d="M460 345l43-13 33 18v38l-43 13-33-21z" fill="#7bbf99" />
+            <path d="M460 345l43-13 33 18-43 13z" fill="#c2edb7" />
+            <path
+              d="M499 366v10m20-16v10"
+              stroke="#3c5345"
+              stroke-width="7"
+              stroke-linecap="round"
+            />
+            <path d="M507 384l10-3" stroke="#3c5345" stroke-width="4" />
+            <path
+              d="M180 170l75-20 55 34v67l-75 20-55-34z"
+              fill="#79503e"
+              stroke="#603c30"
+              stroke-width="4"
+            />
+            <path d="M180 170l75-20 55 34-75 20z" fill="#c8926c" />
+            <path
+              d="M202 179l53-14 33 20-53 14zm-10 21 32 20v27l-32-20zm47 22 57-16v30l-57 16z"
+              fill="#a56e50"
+            />
+            <path d="M245 205l8 15-12 8 13 15" fill="none" stroke="#f3c994" stroke-width="4" />
+            <path
+              d="M390 169q-27-43-53-6t37 62q49-33 16-56"
+              fill="#dd6f72"
+              stroke="#ad5258"
+              stroke-width="4"
+            />
+            <path d="M361 149l8 17 16-12-4 23" fill="#69916a" stroke="#69916a" stroke-width="5" />
+            <path d="M352 178l4 6m23-8 4 6m-17 9 4 6" stroke="#ffe4ab" stroke-width="4" />
+            <circle cx="130" cy="233" r="27" fill="#eeb66c" stroke="#c98b4e" stroke-width="4" />
+            <path d="M130 205q2-18 18-12" fill="none" stroke="#748c5d" stroke-width="5" />
+            <path
+              d="M423 275l12-24 12 24-12 24z"
+              fill="#fff3b0"
+              stroke="#d6ac59"
+              stroke-width="3"
+            />
+            <path d="M325 89h86v16h-86zm25 21h46v8h-46" stroke="#d4aa8b" stroke-width="5" />
+            <path d="M62 418l39 24m335 45 49-15" stroke="#f8e6cd" stroke-width="10" />
+          </svg>
+          <p>长一点，攒下力量。短一点，拐出新路。</p>
+        </div>
       </section>
-      <section id="levelScreen" class="menu-screen" aria-labelledby="levelSelectTitle" hidden>
+      <section
+        id="recipeScreen"
+        class="menu-screen choice-screen"
+        data-screen
+        aria-labelledby="recipeTitle"
+        hidden
+      >
+        <p class="chapter-label">糖果远征 · 巧克力工坊</p>
+        <h2 id="recipeTitle">这次，用哪份配方？</h2>
+        <p class="menu-intro">
+          每份配方都能通关。身体越长，Q 越有力量。<br />每局三颗心，房间之间选择升级。
+        </p>
+        <div id="recipeList" class="choice-list"></div>
+        <button class="text-btn" data-action="home" type="button">返回首页</button>
+      </section>
+      <section
+        id="rewardScreen"
+        class="menu-screen choice-screen"
+        data-screen
+        aria-labelledby="rewardTitle"
+        hidden
+      >
+        <p class="chapter-label">房间已完成 · 移动已停止</p>
+        <h2 id="rewardTitle">给配方，加一点新想法。</h2>
+        <p id="rewardSummary" class="menu-intro"></p>
+        <div id="upgradeList" class="choice-list"></div>
+        <button class="text-btn" data-action="home" type="button">保存并返回</button>
+      </section>
+      <section
+        id="levelScreen"
+        class="menu-screen"
+        data-screen
+        aria-labelledby="levelSelectTitle"
+        hidden
+      >
         <h2 id="levelSelectTitle">选一站，开始送糖</h2>
         <p class="menu-intro">完成订单后，走进亮起的出口。<br />每通一关，解锁下一站。</p>
         <div id="levelList" class="level-list"></div>
         <p class="menu-note" id="levelProgress"></p>
         <button class="text-btn" data-action="home" type="button">返回首页</button>
       </section>
-      <section id="playScreen" class="play-screen" aria-label="游戏区域" hidden>
+      <section id="playScreen" class="play-screen" data-screen aria-label="游戏区域" hidden>
         <div class="session-heading">
           <p id="levelLabel" class="session-label">经典模式</p>
           <button class="text-btn" id="menuBtn" data-action="home" type="button">返回首页</button>
         </div>
-        <div class="score-board">
-          <div class="score-box">SCORE<br /><span id="score">0</span></div>
-          <div class="score-box">COMBO<br /><span id="combo">x0</span></div>
-          <div class="score-box">
-            <span id="recordLabel" class="score-label">BEST</span><br /><span id="highScore"
-              >0</span
-            >
-          </div>
-          <div class="toolbar">
-            <button
-              class="sound-btn"
-              id="pauseBtn"
-              data-action="toggle-pause"
-              type="button"
-              aria-label="暂停游戏"
-              title="暂停游戏"
-              disabled
-            >
-              Ⅱ
-            </button>
-            <button
-              class="sound-btn"
-              id="soundBtn"
-              data-action="toggle-sound"
-              type="button"
-              aria-label="关闭音效"
-              title="关闭音效"
-              aria-pressed="true"
-            >
-              🔊
-            </button>
-          </div>
-        </div>
-        <section id="campaignHud" class="campaign-hud" aria-label="当前订单" hidden>
-          <div class="order-slots">
-            <div id="orderRow" class="order-row">
-              <span class="order-label">还缺</span>
-              <div id="orderProgress" class="order-progress"></div>
+        <div class="play-layout">
+          <aside class="play-sidebar" aria-label="订单和配方">
+            <div class="score-board">
+              <div class="score-box">SCORE<br /><span id="score">0</span></div>
+              <div class="score-box">COMBO<br /><span id="combo">x0</span></div>
+              <div class="score-box">
+                <span id="recordLabel" class="score-label">BEST</span><br /><span id="highScore"
+                  >0</span
+                >
+              </div>
+              <div class="toolbar">
+                <button
+                  class="sound-btn"
+                  id="pauseBtn"
+                  data-action="toggle-pause"
+                  type="button"
+                  aria-label="暂停游戏"
+                  title="暂停游戏"
+                  disabled
+                >
+                  Ⅱ
+                </button>
+                <button
+                  class="sound-btn"
+                  id="soundBtn"
+                  data-action="toggle-sound"
+                  type="button"
+                  aria-label="关闭音效"
+                  title="关闭音效"
+                  aria-pressed="true"
+                >
+                  🔊
+                </button>
+              </div>
             </div>
-            <p id="orderReady" class="order-ready" hidden>订单收齐 · 前往绿色出口 →</p>
-          </div>
-          <div class="order-status">
-            <p id="exitHint" class="exit-hint" role="status" aria-live="polite">
-              四角标记 = 还缺的水果
+            <section id="expeditionHud" class="expedition-hud" aria-label="远征状态" hidden>
+              <p id="runHearts" class="run-hearts" aria-label="剩余 3 颗心">♥♥♥</p>
+              <h3 id="skillPower"></h3>
+              <p id="runLesson"></p>
+              <details id="buildDetails">
+                <summary>查看已选升级</summary>
+                <p id="runUpgrades"></p>
+              </details>
+            </section>
+            <section id="campaignHud" class="campaign-hud" aria-label="当前订单" hidden>
+              <div class="order-slots">
+                <div id="orderRow" class="order-row">
+                  <span class="order-label">还缺</span>
+                  <div id="orderProgress" class="order-progress"></div>
+                </div>
+                <p id="orderReady" class="order-ready" hidden>订单收齐 · 前往绿色出口 →</p>
+              </div>
+              <div class="order-status">
+                <p id="exitHint" class="exit-hint" role="status" aria-live="polite">
+                  四角标记 = 还缺的水果
+                </p>
+                <p
+                  id="campaignFeedback"
+                  class="campaign-feedback"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  hidden
+                ></p>
+              </div>
+            </section>
+            <div id="campaignTools" class="campaign-tools" hidden>
+              <button
+                id="cutTailBtn"
+                class="secondary-btn cut-tail-btn"
+                data-action="cut-tail"
+                type="button"
+                disabled
+              >
+                Q 断尾 · 还需长到 6 节
+              </button>
+              <p class="skill-note" id="skillNote">
+                舍去尾部 3 节，保留至少 3 节。分数与订单不变。
+              </p>
+            </div>
+          </aside>
+          <div class="board-column">
+            <div class="canvas-wrap" id="canvasWrap">
+              <canvas
+                id="gameCanvas"
+                width="400"
+                height="400"
+                tabindex="0"
+                aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。闯关时四角标记表示还缺的水果。"
+                >请使用支持 Canvas 的浏览器游玩。</canvas
+              >
+              <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
+            </div>
+            <div class="touch-directions" aria-label="触屏方向控制">
+              <button data-action="turn" data-direction="left" type="button" aria-label="向左">
+                ←
+              </button>
+              <button data-action="turn" data-direction="up" type="button" aria-label="向上">
+                ↑
+              </button>
+              <button data-action="turn" data-direction="down" type="button" aria-label="向下">
+                ↓
+              </button>
+              <button data-action="turn" data-direction="right" type="button" aria-label="向右">
+                →
+              </button>
+            </div>
+            <p class="controls-hint" id="controlsHint">
+              方向键 / WASD / 触屏滑动<br />空格 开始 / 重开 &nbsp;|&nbsp; P / Esc 暂停
             </p>
-            <p
-              id="campaignFeedback"
-              class="campaign-feedback"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-              hidden
-            ></p>
           </div>
-        </section>
-        <div class="canvas-wrap" id="canvasWrap">
-          <canvas
-            id="gameCanvas"
-            width="400"
-            height="400"
-            tabindex="0"
-            aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。闯关时四角标记表示还缺的水果。"
-            >请使用支持 Canvas 的浏览器游玩。</canvas
-          >
-          <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
         </div>
-        <div id="campaignTools" class="campaign-tools" hidden>
-          <button
-            id="cutTailBtn"
-            class="secondary-btn cut-tail-btn"
-            data-action="cut-tail"
-            type="button"
-            disabled
-          >
-            Q 断尾 · 还需长到 6 节
-          </button>
-          <p class="skill-note">舍去尾部 3 节，保留至少 3 节。分数与订单不变。</p>
-        </div>
-        <div class="touch-directions" aria-label="触屏方向控制">
-          <button data-action="turn" data-direction="left" type="button" aria-label="向左">
-            ←
-          </button>
-          <button data-action="turn" data-direction="up" type="button" aria-label="向上">↑</button>
-          <button data-action="turn" data-direction="down" type="button" aria-label="向下">
-            ↓
-          </button>
-          <button data-action="turn" data-direction="right" type="button" aria-label="向右">
-            →
-          </button>
-        </div>
-        <p class="controls-hint" id="controlsHint">
-          方向键 / WASD / 触屏滑动<br />空格 开始 / 重开 &nbsp;|&nbsp; P / Esc 暂停
-        </p>
         <section id="overlay" class="overlay" aria-labelledby="overlayTitle">
           <div class="candy-logo" aria-hidden="true">
             <span class="s">S</span><span class="n">N</span><span class="a">A</span

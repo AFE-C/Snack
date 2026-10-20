@@ -1,6 +1,23 @@
 # Candy Snake · 糖果贪吃蛇
 
-糖果像素风贪吃蛇，包含“三关糖果闯关”和经典模式。核心、关卡、界面与平台适配分开，便于继续开发地图和规则。当前版本 1.2.0。
+糖果像素风的实时路线游戏，包含“糖果远征”、三关闯关和经典模式。当前版本 **2.0.0 试玩版**。用身体储存技能，在房间之间选择升级，为同一份订单走出不同的路。
+
+桌面界面铺满窗口，棋盘随可用宽高缩放；右侧集中展示订单、生命和技能，小屏切换为上下布局。1366×768 窗口实测棋盘约 581px。
+
+## 糖果远征
+
+- 巧克力工坊包含六个房间、十张手工地图，种子决定中间四个房间的变体。
+- 开局选择脆糖冲击、冰糖缓流或果香牵引，始终使用 Q（手柄 X / RB）施放。三种配方都能独立通关。
+- 开局长六节，身体最多十二节。Q 默认消耗三节、最少保留三节；九节达到二级、十二节达到三级。没有目标也会断尾。
+- 破墙范围为 1 / 2 / 3 格；减速变为 225ms / 步，持续 8 / 12 / 16 个逻辑步；吸取前方 2 / 3 / 4 格内第一颗水果。默认移动仍是 150ms / 步。
+- 三颗心，撞击扣一颗，重试回到本房间入口：相同身体、订单、地形和随机状态，保留已选升级。
+- 前五个房间完成后停止移动，从三个未持有升级中选择一个，共九项升级；通关后保留身体长度。
+- 在入口、结算和升级选择后保存独立检查点。返回首页或刷新后可以续玩；进行中的房间从入口重新开始。
+- 网页存档与 Windows 文件存档分别保存，不做跨平台迁移。三关进度和经典最高分兼容原版本。
+
+手柄方向键 / 左摇杆控制方向和菜单焦点，A 确认、B 返回或暂停、Start 暂停、X / RB 施法；支持插拔和摇杆死区。键盘支持 Tab / 方向键选择菜单，Enter 确认，游戏操作沿用下文。
+
+试玩版的首次体验目标为 20～30 分钟，尚需真实玩家验证时长、理解程度和重玩意愿。招募与记录表见 [PLAYTEST.md](PLAYTEST.md)；工程和浏览器证据见 [VALIDATION.md](VALIDATION.md)。
 
 ## 开始游玩
 
@@ -44,19 +61,21 @@ npm ci
 npm run dev
 ```
 
-| 命令                   | 用途                             |
-| ---------------------- | -------------------------------- |
-| `npm run dev`          | Vite 开发服务与热更新            |
-| `npm run typecheck`    | TypeScript 严格类型检查          |
-| `npm run lint`         | ESLint 零警告检查                |
-| `npm run format`       | Prettier 格式化                  |
-| `npm run format:check` | 只检查格式                       |
-| `npm test`             | 全部规则、生命周期与界面回归测试 |
-| `npm run test:watch`   | 监听测试                         |
-| `npm run check`        | 类型、静态、格式检查与测试       |
-| `npm run build`        | 构建单文件 HTML，并检查内嵌资源  |
-| `npm run verify:build` | 检查资源内嵌和测试夹具隔离       |
-| `npm run preview`      | 预览发布产物                     |
+| 命令                      | 用途                                     |
+| ------------------------- | ---------------------------------------- |
+| `npm run dev`             | Vite 开发服务与热更新                    |
+| `npm run typecheck`       | TypeScript 严格类型检查                  |
+| `npm run lint`            | ESLint 零警告检查                        |
+| `npm run format`          | Prettier 格式化                          |
+| `npm run format:check`    | 只检查格式                               |
+| `npm test`                | 全部规则、生命周期与界面回归测试         |
+| `npm run test:watch`      | 监听测试                                 |
+| `npm run check`           | 类型、静态、格式检查与测试               |
+| `npm run build`           | 构建单文件 HTML，并检查内嵌资源          |
+| `npm run verify:build`    | 检查资源内嵌和测试夹具隔离               |
+| `npm run preview`         | 预览发布产物                             |
+| `npm run desktop:package` | 构建并打包 Windows x64 试玩版            |
+| `npm run desktop:smoke`   | 隐藏窗口验证桌面启动、渲染就绪与文件存档 |
 
 分享时只需要 `dist/index.html`。在 `src` 修改功能后重新构建；不要直接修改 `dist`。Git 忽略依赖、构建、缓存和压缩包；交付压缩包包含源码、文档和可玩产物。
 
@@ -80,10 +99,14 @@ npm run dev
 
 浏览器适配器使用 `candySnakeHighScore`、`candySnakeSoundEnabled` 和独立的 `candySnakeCampaignProgress`。进度采用版本化的连续已完成关卡列表，损坏记录恢复为仅解锁第一关。存储被禁用时仍可游玩，当前会话保留解锁结果，刷新后不保证保存。
 
-不同网站、端口和文件页面的存档相互隔离。本轮不进行跨来源迁移。后续可用 Electron 桌面外壳复用核心和 Canvas，替换 `StorageAdapter`、接入手柄动作和成就事件。桌面打包与 Steam 发布属于后续版本。
+不同网站、端口和文件页面的存档相互隔离。当前不进行跨来源迁移。Windows 外壳使用 Electron 44.9.1，文件存档通过隔离的 preload 桥接接入 `StorageAdapter`，保持沙箱、上下文隔离和 Node 隔离。Steam 成就与云存档属于后续平台接入。
 
 ## 仓库与素材
 
 仓库：[AFE-C/Snack](https://github.com/AFE-C/Snack)，默认分支 `main`。本轮先将工程化基线与方案推送并验证，再开发玩法；原 `master` 与历史保留。基线提交：[e8cdf73](https://github.com/AFE-C/Snack/commit/e8cdf739266fe84a7e22d4b30174d8c0a2670339)。
 
 蛇、水果、背景和粒子复用原项目的代码绘图；巧克力墙与出口也由 Canvas 绘制。Press Start 2P 字体采用 SIL Open Font License 1.1，完整许可见 [licenses/Press-Start-2P-OFL.txt](licenses/Press-Start-2P-OFL.txt)，也嵌入发布文件。原始 TRAE 项目保留。
+
+新增工坊首页矢量场景、桌面图标和远征薄荷色角色为代码绘图；远征背景音乐和提示音由 Web Audio 实时合成，不访问外部资源。桌面包需保留 Electron 随附的 LICENSE 与 Chromium 许可文件。发行准备和交付文件说明见 [RELEASE.md](RELEASE.md)。
+
+开发服务的 `/tests/browser/expedition.html` 提供种子 42、手动时钟和独立 QA 存档，可逐步检查三种配方、升级、三心、续玩和六房间流程，也可导出 23 秒实机预告。验收驱动和录像代码不进入单文件发布产物。

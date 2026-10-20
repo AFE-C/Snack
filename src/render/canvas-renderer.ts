@@ -60,6 +60,22 @@ export class CanvasRenderer {
     this.timeMs += deltaMs;
     this.drawBackground(snapshot);
     this.drawObstacles(snapshot);
+    for (const point of snapshot.fragileObstacles ?? []) {
+      const x = point.x * CELL_SIZE,
+        y = point.y * CELL_SIZE;
+      this.ctx.fillStyle = '#a36a4d';
+      this.ctx.fillRect(x + 1, y + 1, 18, 18);
+      this.ctx.fillStyle = '#d5a16f';
+      this.ctx.fillRect(x + 3, y + 3, 14, 3);
+      this.ctx.strokeStyle = '#ffe0a2';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x + 10, y + 2);
+      this.ctx.lineTo(x + 7, y + 8);
+      this.ctx.lineTo(x + 12, y + 11);
+      this.ctx.lineTo(x + 8, y + 18);
+      this.ctx.stroke();
+    }
     this.drawExit(snapshot);
     const campaign = snapshot.victoryCondition === 'orders-and-exit';
     const needed = new Set(getRemainingOrder(snapshot.orderProgress).map((item) => item.fruitType));
@@ -115,14 +131,21 @@ export class CanvasRenderer {
 
     // 渐变底色
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, COLORS.bgTop);
-    grad.addColorStop(1, COLORS.bgBottom);
+    grad.addColorStop(0, snapshot.modeId === 'expedition' ? '#f9efd6' : COLORS.bgTop);
+    grad.addColorStop(1, snapshot.modeId === 'expedition' ? '#e7e8ce' : COLORS.bgBottom);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    if (snapshot.modeId === 'expedition') {
+      for (let y = 0; y < ROWS; y += 1)
+        for (let x = 0; x < COLS; x += 1) {
+          this.ctx.fillStyle = (x + y) % 2 === 0 ? '#fff7de28' : '#8b745b08';
+          this.ctx.fillRect(x * GRID, y * GRID, GRID, GRID);
+        }
+    }
     // 云朵（像素对齐，避免抖动）
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    clouds.forEach((c) => {
+    (snapshot.modeId === 'expedition' ? [] : clouds).forEach((c) => {
       const cx = Math.floor(c.x + Math.sin(time * 0.008 + c.x * 0.1) * 4);
       const cy = Math.floor(c.y);
       const s = c.size;
@@ -180,8 +203,15 @@ export class CanvasRenderer {
       const y = seg.y * GRID;
 
       // 身体交替粉紫
-      const bodyColor = i % 2 === 0 ? COLORS.snakeBodyA : COLORS.snakeBodyB;
-      ctx.fillStyle = i === 0 ? COLORS.snakeHead : bodyColor;
+      const expedition = snapshot.modeId === 'expedition';
+      const bodyColor = expedition
+        ? i % 2 === 0
+          ? '#9bd9ad'
+          : '#b6dda9'
+        : i % 2 === 0
+          ? COLORS.snakeBodyA
+          : COLORS.snakeBodyB;
+      ctx.fillStyle = i === 0 ? (expedition ? '#65af8b' : COLORS.snakeHead) : bodyColor;
 
       // 圆角像素身体
       ctx.fillRect(x + 2, y + 1, GRID - 4, GRID - 2);

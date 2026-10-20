@@ -1,3 +1,5 @@
+import type { ExpeditionRules, SkillSnapshot } from './expedition';
+
 export interface Position {
   readonly x: number;
   readonly y: number;
@@ -49,6 +51,7 @@ export interface LevelDefinition {
   readonly cols: number;
   readonly rows: number;
   readonly obstacles: readonly Position[];
+  readonly fragileObstacles?: readonly Position[];
   /** 从头到尾排列，方向不能指向颈部。 */
   readonly initialSnake: readonly Position[];
   readonly initialDirection: Direction;
@@ -72,6 +75,7 @@ export interface ModeDefinition {
   readonly foodCount: number;
   readonly victoryCondition: VictoryCondition;
   readonly tailCut: TailCutRule | null;
+  readonly expedition?: ExpeditionRules;
   /** 将下一格映射为实际目标格，例如以后实现穿墙模式。 */
   readonly resolveNextPosition: (next: Position, level: LevelDefinition) => Position;
   readonly calculatePoints: (food: Food, combo: number) => number;
@@ -88,16 +92,22 @@ export interface GameSnapshot extends RuleContext {
   readonly canCutTail: boolean;
   readonly victoryCondition: VictoryCondition;
   readonly stepMs: number;
+  readonly skill?: SkillSnapshot;
+  readonly fragileObstacles?: readonly Position[];
+  readonly slowSteps?: number;
+  readonly growthPending?: number;
 }
 
 export type GameCommand =
-  | { readonly type: 'start' | 'restart' | 'pause' | 'resume' | 'cut-tail' }
+  | { readonly type: 'start' | 'restart' | 'pause' | 'resume' | 'cut-tail' | 'use-skill' }
   | { readonly type: 'turn'; readonly direction: Direction };
 
 export type GameEvent =
   | { readonly type: 'session-started'; readonly sessionId: number }
   | { readonly type: 'status-changed'; readonly status: GameStatus }
   | { readonly type: 'tail-cut'; readonly segments: readonly Position[] }
+  | { readonly type: 'skill-used'; readonly skill: SkillSnapshot }
+  | { readonly type: 'terrain-broken'; readonly positions: readonly Position[] }
   | { readonly type: 'exit-opened'; readonly exit: Position }
   | { readonly type: 'order-item-completed'; readonly fruitType: string }
   | { readonly type: 'level-completed'; readonly levelId: string; readonly score: number }

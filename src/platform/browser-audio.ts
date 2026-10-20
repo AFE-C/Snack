@@ -1,5 +1,5 @@
 import type { AudioPort } from '../app/ports';
-import type { GameEvent } from '../core/types';
+import type { GameEvent, GameSnapshot } from '../core/types';
 
 type AudioContextFactory = () => AudioContext;
 
@@ -11,8 +11,13 @@ export class BrowserAudio implements AudioPort {
   private enabled = true;
   private paused = false;
   private disposed = false;
+  private musicElapsed = 0;
+  private musicNote = 0;
 
-  constructor(private readonly createContext: AudioContextFactory = () => new AudioContext()) {}
+  constructor(
+    private readonly createContext: AudioContextFactory = () => new AudioContext(),
+    private readonly music = false,
+  ) {}
 
   unlock(): void {
     if (this.disposed) return;
@@ -44,6 +49,8 @@ export class BrowserAudio implements AudioPort {
   play(event: GameEvent): void {
     if (!this.enabled || this.paused || this.disposed) return;
     if (event.type === 'session-started') {
+      this.musicNote = 0;
+      this.musicElapsed = 0;
       this.stopVoices();
       this.tone(523, 0.08, 'square', 0.08);
       this.tone(659, 0.08, 'square', 0.08, 0.08);
@@ -63,6 +70,10 @@ export class BrowserAudio implements AudioPort {
     } else if (event.type === 'order-item-completed') {
       this.tone(784, 0.07, 'triangle', 0.09);
       this.tone(1047, 0.1, 'triangle', 0.08, 0.07);
+    } else if (event.type === 'skill-used') {
+      const frequency = event.skill.id === 'crush' ? 220 : event.skill.id === 'slow' ? 523 : 784;
+      this.tone(frequency, 0.12, 'triangle', 0.1);
+      this.tone(frequency * 1.5, 0.16, 'triangle', 0.08, 0.08);
     } else if (event.type === 'tail-cut') {
       this.tone(660, 0.08, 'triangle', 0.1);
       this.tone(330, 0.12, 'triangle', 0.08, 0.06);
@@ -76,6 +87,31 @@ export class BrowserAudio implements AudioPort {
         this.tone(220, 0.3, 'square', 0.08, 0.24);
       }
     }
+  }
+
+  update(deltaMs: number, snapshot: GameSnapshot): void {
+    if (
+      !this.music ||
+      !this.enabled ||
+      this.paused ||
+      this.disposed ||
+      snapshot.status !== 'playing'
+    )
+      return;
+    this.musicElapsed += deltaMs;
+    const beat = snapshot.level.id === 'dispatch' ? 280 : 360;
+    if (this.musicElapsed < beat) return;
+    this.musicElapsed %= beat;
+    // 原创的八小节五声音阶，直接合成；不下载第三方音乐或创建第二个计时器。
+    const melody = [
+      0, 7, 12, 7, 4, 7, 9, 7, 2, 7, 11, 7, 4, 9, 12, 9, 0, 4, 7, 12, 9, 7, 4, 7, 2, 5, 9, 12, 7, 5,
+      2, 7,
+    ];
+    const note = melody[this.musicNote % melody.length] ?? 0;
+    this.tone(261.63 * 2 ** (note / 12), 0.2, 'triangle', 0.035);
+    if (this.musicNote % 4 === 0)
+      this.tone(130.81 * 2 ** ((this.musicNote % 16 < 8 ? 0 : 5) / 12), 0.26, 'sine', 0.045);
+    this.musicNote += 1;
   }
 
   dispose(): void {

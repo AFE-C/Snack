@@ -1,4 +1,5 @@
 import { isGridPosition, isInside, prepareLevel } from './level';
+import { getSkill, SKILL_IDS, UPGRADE_IDS } from './expedition';
 import { DIRECTION_VECTORS, positionKey, samePosition } from './types';
 import type {
   Direction,
@@ -39,6 +40,10 @@ export class GameEngine {
   private readonly obstacles: ReadonlySet<string>;
   private readonly turns: Direction[] = [];
   private state: GameSnapshot;
+  private fragile: Position[] = [];
+  private slowRemaining = 0;
+  private pendingGrowth = 0;
+  private giftUsed = false;
 
   constructor(options: GameOptions) {
     this.level = prepareLevel(options.level);
@@ -66,7 +71,9 @@ export class GameEngine {
         this.enqueueTurn(command.direction);
         return [];
       case 'cut-tail':
-        return this.cutTail();
+        return this.mode.expedition ? this.useSkill() : this.cutTail();
+      case 'use-skill':
+        return this.useSkill();
     }
   }
 
@@ -82,36 +89,21 @@ export class GameEngine {
     );
     if (!isGridPosition(next)) throw new Error('模式必须返回整数网格坐标');
     if (!isInside(next, this.level)) return this.endGame('wall', direction);
-    if (this.obstacles.has(positionKey(next))) return this.endGame('obstacle', direction);
+    if (this.blocked(next)) return this.endGame('obstacle', direction);
     const food = this.state.foods.find((item) => samePosition(item, next));
     // 未进食时尾巴会在同一步移走，目标格可以是当前尾格。
-    const retainedBody = food ? this.state.snake : this.state.snake.slice(0, -1);
+    const grows =
+      (!!food || this.pendingGrowth > 0) && (!this.mode.expedition || this.state.snake.length < 12);
+    const retainedBody = grows ? this.state.snake : this.state.snake.slice(0, -1);
     if (retainedBody.some((segment) => samePosition(segment, next)))
       return this.endGame('body', direction);
     const snake = [next, ...this.state.snake];
-    if (!food) snake.pop();
-    let score = this.state.score;
-    let combo = this.state.combo;
-    let orderProgress = this.state.orderProgress;
+    if (!grows) snake.pop();
+    if (grows && !food && this.pendingGrowth > 0) this.pendingGrowth -= 1;
     const events: GameEvent[] = [];
-    if (food) {
-      combo += 1;
-      const points = this.mode.calculatePoints(food, combo);
-      if (!Number.isSafeInteger(points) || points < 0 || !Number.isSafeInteger(score + points)) {
-        throw new Error('模式计分必须返回非负安全整数，且总分不能溢出');
-      }
-      score += points;
-      events.push({ type: 'food-eaten', food, points, combo });
-      if (combo % 10 === 0)
-        events.push({ type: 'combo-milestone', food, combo, level: combo / 10 });
-      orderProgress = orderProgress.map((item) => {
-        if (item.fruitType !== food.type || item.collected >= item.required) return item;
-        const collected = item.collected + 1;
-        if (collected === item.required)
-          events.push({ type: 'order-item-completed', fruitType: item.fruitType });
-        return { ...item, collected };
-      });
-    }
+    const { score, combo, orderProgress } = food ? this.collectFood(food, events) : this.state;
+    if (this.mode.expedition && snake.length >= 12) this.pendingGrowth = 0;
+    if (this.slowRemaining > 0) this.slowRemaining -= 1;
     const exitActive = this.isOrderComplete(orderProgress);
     if (exitActive && !this.state.exitActive && this.level.exit) {
       events.push({ type: 'exit-opened', exit: this.level.exit });
@@ -185,6 +177,95 @@ export class GameEngine {
     return [{ type: 'tail-cut', segments }];
   }
 
+  private blocked(point: Position): boolean {
+    return (
+      this.obstacles.has(positionKey(point)) ||
+      this.fragile.some((item) => samePosition(item, point))
+    );
+  }
+
+  private collectFood(food: Food, events: GameEvent[]) {
+    const combo = this.state.combo + 1;
+    const points = this.mode.calculatePoints(food, combo);
+    const score = this.state.score + points;
+    if (!Number.isSafeInteger(points) || points < 0 || !Number.isSafeInteger(score))
+      throw new Error('模式计分必须返回非负安全整数，且总分不能溢出');
+    events.push({ type: 'food-eaten', food, points, combo });
+    if (combo % 10 === 0) events.push({ type: 'combo-milestone', food, combo, level: combo / 10 });
+    const upgrades = this.mode.expedition?.upgrades ?? [];
+    if (upgrades.includes('supply') && combo % 3 === 0) this.pendingGrowth += 1;
+    const target = this.state.orderProgress.find(
+      (item) => item.fruitType === food.type && item.collected < item.required,
+    );
+    const bonus = target && upgrades.includes('gift') && !this.giftUsed ? 1 : 0;
+    if (bonus) this.giftUsed = true;
+    const orderProgress = this.state.orderProgress.map((item) => {
+      if (item.fruitType !== food.type || item.collected >= item.required) return item;
+      const collected = Math.min(item.required, item.collected + 1 + bonus);
+      if (collected === item.required)
+        events.push({ type: 'order-item-completed', fruitType: item.fruitType });
+      return { ...item, collected };
+    });
+    return { score, combo, orderProgress };
+  }
+
+  private useSkill(): readonly GameEvent[] {
+    const skill = this.state.skill;
+    if (!skill?.available || !this.mode.expedition) return [];
+    const segments = this.state.snake.slice(-skill.cost);
+    const snake = this.state.snake.slice(0, -skill.cost);
+    const events: GameEvent[] = [
+      { type: 'tail-cut', segments },
+      { type: 'skill-used', skill },
+    ];
+    const head = snake[0];
+    if (!head) return [];
+    const vector = DIRECTION_VECTORS[this.state.direction];
+    const ahead = (distance: number) => ({
+      x: head.x + vector.x * distance,
+      y: head.y + vector.y * distance,
+    });
+    const broken: Position[] = [];
+    for (let distance = 1; distance <= skill.breakRange; distance += 1) {
+      const point = ahead(distance);
+      if (!isInside(point, this.level) || this.obstacles.has(positionKey(point))) break;
+      if (this.fragile.some((item) => samePosition(item, point))) broken.push(point);
+    }
+    if (broken.length) {
+      this.fragile = this.fragile.filter(
+        (point) => !broken.some((item) => samePosition(item, point)),
+      );
+      events.push({ type: 'terrain-broken', positions: broken });
+    }
+    this.slowRemaining = Math.max(this.slowRemaining, skill.slowDuration);
+    let captured: Food | undefined;
+    for (let distance = 1; distance <= skill.magnetRange; distance += 1) {
+      const point = ahead(distance);
+      if (!isInside(point, this.level) || this.blocked(point)) break;
+      captured = this.state.foods.find((food) => samePosition(food, point));
+      if (captured) break;
+    }
+    const collected = captured ? this.collectFood(captured, events) : this.state;
+    // 吸果与额外糖衣在后续移动时保留尾格生长，避免原地新增重叠的身体。
+    if (captured) this.pendingGrowth += 1;
+    this.pendingGrowth = Math.min(this.pendingGrowth, 12 - snake.length);
+    const exitActive = this.isOrderComplete(collected.orderProgress);
+    if (exitActive && !this.state.exitActive && this.level.exit)
+      events.push({ type: 'exit-opened', exit: this.level.exit });
+    this.state = this.snapshot({
+      ...this.state,
+      ...collected,
+      snake,
+      exitActive,
+      foods: this.replenish(
+        snake,
+        this.state.foods.filter((food) => food !== captured),
+        collected.orderProgress,
+      ),
+    });
+    return events;
+  }
+
   private changeStatus(status: GameStatus): readonly GameEvent[] {
     this.turns.length = 0;
     this.state = this.snapshot({ ...this.state, status });
@@ -213,6 +294,10 @@ export class GameEngine {
   }
 
   private freshState(status: GameStatus, sessionId: number): GameSnapshot {
+    this.fragile = (this.level.fragileObstacles ?? []).map((point) => ({ ...point }));
+    this.slowRemaining = 0;
+    this.pendingGrowth = 0;
+    this.giftUsed = false;
     const snake = this.level.initialSnake;
     const orderProgress =
       this.mode.victoryCondition === 'orders-and-exit'
@@ -236,7 +321,7 @@ export class GameEngine {
   }
 
   private snapshot(source: Omit<GameSnapshot, 'stepMs' | 'canCutTail'>): GameSnapshot {
-    const stepMs = this.mode.getStepMs(source);
+    const stepMs = this.slowRemaining > 0 ? 225 : this.mode.getStepMs(source);
     if (!Number.isFinite(stepMs) || stepMs <= 0) throw new Error('模式步进间隔必须大于 0');
     const rule = this.mode.tailCut;
     return Object.freeze({
@@ -244,11 +329,22 @@ export class GameEngine {
       snake: Object.freeze(source.snake.map((point) => Object.freeze({ ...point }))),
       foods: Object.freeze(source.foods.map((food) => Object.freeze({ ...food }))),
       orderProgress: Object.freeze(source.orderProgress.map((item) => Object.freeze({ ...item }))),
-      canCutTail:
-        source.status === 'playing' &&
-        rule !== null &&
-        source.snake.length >= rule.minimumLength + rule.segments,
+      canCutTail: this.mode.expedition
+        ? getSkill(this.mode.expedition, source.snake.length, source.status === 'playing').available
+        : source.status === 'playing' &&
+          rule !== null &&
+          source.snake.length >= rule.minimumLength + rule.segments,
       stepMs,
+      ...(this.mode.expedition
+        ? {
+            skill: getSkill(this.mode.expedition, source.snake.length, source.status === 'playing'),
+            fragileObstacles: Object.freeze(
+              this.fragile.map((point) => Object.freeze({ ...point })),
+            ),
+            slowSteps: this.slowRemaining,
+            growthPending: this.pendingGrowth,
+          }
+        : {}),
     });
   }
 
@@ -270,6 +366,7 @@ export class GameEngine {
     const foods = [...existing];
     const occupied = new Set([
       ...this.obstacles,
+      ...this.fragile.map(positionKey),
       ...snake.map(positionKey),
       ...foods.map(positionKey),
     ]);
@@ -327,6 +424,13 @@ export class GameEngine {
   }
 
   private prepareMode(source: ModeDefinition): ModeDefinition {
+    if (
+      source.expedition &&
+      (!SKILL_IDS.includes(source.expedition.skillId) ||
+        source.expedition.upgrades.some((id) => !UPGRADE_IDS.includes(id)) ||
+        new Set(source.expedition.upgrades).size !== source.expedition.upgrades.length)
+    )
+      throw new Error('远征配方或升级无效');
     const types = new Set<string>();
     let totalWeight = 0;
     for (const fruit of source.fruits) {
@@ -370,6 +474,14 @@ export class GameEngine {
       ...source,
       fruits: Object.freeze(source.fruits.map((fruit) => Object.freeze({ ...fruit }))),
       tailCut: source.tailCut ? Object.freeze({ ...source.tailCut }) : null,
+      ...(source.expedition
+        ? {
+            expedition: Object.freeze({
+              ...source.expedition,
+              upgrades: Object.freeze([...source.expedition.upgrades]),
+            }),
+          }
+        : {}),
     });
   }
 }
