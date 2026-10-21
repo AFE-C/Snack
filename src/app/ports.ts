@@ -38,13 +38,44 @@ export interface GameView {
   reset(snapshot: GameSnapshot): void;
   updateHud(snapshot: GameSnapshot, settings: PlayerSettings): void;
   handleEvents(events: readonly GameEvent[], snapshot: GameSnapshot): void;
-  draw(snapshot: GameSnapshot, deltaMs: number): void;
+  draw(snapshot: GameSnapshot, deltaMs: number, frame?: PresentationFrame): void;
   showOverlay(snapshot: GameSnapshot, isNewRecord: boolean): void;
   hideOverlay(): void;
   dispose(): void;
 }
 
+export interface PresentationFrame {
+  readonly worldDeltaMs: number;
+  readonly aimRemainingMs: number;
+  readonly releaseRemainingMs: number;
+}
+
+export type InputSource = 'keyboard' | 'gamepad' | 'pointer' | 'button';
+
+export type SessionAction =
+  | { readonly type: 'primary' | 'toggle-pause' | 'pause' | 'toggle-sound' | 'cut-tail' }
+  | { readonly type: 'turn'; readonly direction: GameSnapshot['direction'] }
+  | {
+      readonly type: 'skill-press' | 'skill-release' | 'skill-cancel';
+      readonly source: InputSource;
+    };
+
+export function isSessionAction(action: InputAction): action is SessionAction {
+  return (
+    action.type === 'primary' ||
+    action.type === 'toggle-pause' ||
+    action.type === 'pause' ||
+    action.type === 'toggle-sound' ||
+    action.type === 'cut-tail' ||
+    action.type === 'turn' ||
+    action.type === 'skill-press' ||
+    action.type === 'skill-release' ||
+    action.type === 'skill-cancel'
+  );
+}
+
 export type InputAction =
+  | SessionAction
   | {
       readonly type:
         | 'primary'

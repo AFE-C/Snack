@@ -113,7 +113,7 @@ function bootstrap(): () => void {
     canvas,
     onAction: handleAction,
   });
-  const gamepad = new GamepadInput(handleAction, isMenu);
+  const gamepad = new GamepadInput(handleAction, isMenu, () => root.dataset.mode === 'expedition');
   gamepad.mount();
   coordinator.mount();
   menu.updateContinue(storage.loadExpedition());

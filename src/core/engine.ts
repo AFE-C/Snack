@@ -1,5 +1,6 @@
 import { isGridPosition, isInside, prepareLevel } from './level';
 import { getSkill, SKILL_IDS, UPGRADE_IDS } from './expedition';
+import { OPPOSITE, resolveSkillEffects } from './skill-effects';
 import { DIRECTION_VECTORS, positionKey, samePosition } from './types';
 import type {
   Direction,
@@ -19,12 +20,6 @@ import type {
 } from './types';
 
 const MAX_QUEUED_TURNS = 2;
-const OPPOSITE: Readonly<Record<Direction, Direction>> = {
-  up: 'down',
-  down: 'up',
-  left: 'right',
-  right: 'left',
-};
 
 export interface GameOptions {
   readonly level: LevelDefinition;
@@ -44,6 +39,7 @@ export class GameEngine {
   private slowRemaining = 0;
   private pendingGrowth = 0;
   private giftUsed = false;
+  private aimDirection: Direction | null = null;
 
   constructor(options: GameOptions) {
     this.level = prepareLevel(options.level);
@@ -68,17 +64,41 @@ export class GameEngine {
       case 'resume':
         return this.state.status === 'paused' ? this.changeStatus('playing') : [];
       case 'turn':
+        if (this.aimDirection !== null) return this.adjustAim(command.direction);
         this.enqueueTurn(command.direction);
         return [];
+      case 'begin-aim':
+        if (!this.state.skill?.available || this.aimDirection !== null) return [];
+        this.turns.length = 0;
+        this.aimDirection = this.state.direction;
+        this.state = this.snapshot(this.state);
+        return [{ type: 'aim-started' }];
+      case 'aim':
+        return this.adjustAim(command.direction);
+      case 'cancel-aim':
+        if (this.aimDirection === null) return [];
+        this.aimDirection = null;
+        this.state = this.snapshot(this.state);
+        return [{ type: 'aim-cancelled' }];
+      case 'commit-aim': {
+        if (this.aimDirection === null) return [];
+        const direction = this.aimDirection;
+        this.aimDirection = null;
+        return this.useSkill(direction);
+      }
       case 'cut-tail':
-        return this.mode.expedition ? this.useSkill() : this.cutTail();
+        return this.aimDirection !== null
+          ? []
+          : this.mode.expedition
+            ? this.useSkill()
+            : this.cutTail();
       case 'use-skill':
-        return this.useSkill();
+        return this.aimDirection !== null ? [] : this.useSkill();
     }
   }
 
   step(): readonly GameEvent[] {
-    if (this.state.status !== 'playing') return [];
+    if (this.state.status !== 'playing' || this.aimDirection !== null) return [];
     const direction = this.turns.shift() ?? this.state.direction;
     const vector = DIRECTION_VECTORS[direction];
     const head = this.state.snake[0];
@@ -209,7 +229,19 @@ export class GameEngine {
     return { score, combo, orderProgress };
   }
 
-  private useSkill(): readonly GameEvent[] {
+  private adjustAim(direction: Direction): readonly GameEvent[] {
+    if (
+      this.aimDirection === null ||
+      direction === OPPOSITE[this.state.direction] ||
+      direction === this.aimDirection
+    )
+      return [];
+    this.aimDirection = direction;
+    this.state = this.snapshot(this.state);
+    return [{ type: 'aim-changed' }];
+  }
+
+  private useSkill(direction = this.state.direction): readonly GameEvent[] {
     const skill = this.state.skill;
     if (!skill?.available || !this.mode.expedition) return [];
     const segments = this.state.snake.slice(-skill.cost);
@@ -218,19 +250,12 @@ export class GameEngine {
       { type: 'tail-cut', segments },
       { type: 'skill-used', skill },
     ];
-    const head = snake[0];
-    if (!head) return [];
-    const vector = DIRECTION_VECTORS[this.state.direction];
-    const ahead = (distance: number) => ({
-      x: head.x + vector.x * distance,
-      y: head.y + vector.y * distance,
-    });
-    const broken: Position[] = [];
-    for (let distance = 1; distance <= skill.breakRange; distance += 1) {
-      const point = ahead(distance);
-      if (!isInside(point, this.level) || this.obstacles.has(positionKey(point))) break;
-      if (this.fragile.some((item) => samePosition(item, point))) broken.push(point);
-    }
+    const { broken, captured } = resolveSkillEffects(
+      this.state,
+      skill,
+      direction,
+      this.mode.resolveNextPosition,
+    );
     if (broken.length) {
       this.fragile = this.fragile.filter(
         (point) => !broken.some((item) => samePosition(item, point)),
@@ -238,13 +263,6 @@ export class GameEngine {
       events.push({ type: 'terrain-broken', positions: broken });
     }
     this.slowRemaining = Math.max(this.slowRemaining, skill.slowDuration);
-    let captured: Food | undefined;
-    for (let distance = 1; distance <= skill.magnetRange; distance += 1) {
-      const point = ahead(distance);
-      if (!isInside(point, this.level) || this.blocked(point)) break;
-      captured = this.state.foods.find((food) => samePosition(food, point));
-      if (captured) break;
-    }
     const collected = captured ? this.collectFood(captured, events) : this.state;
     // 吸果与额外糖衣在后续移动时保留尾格生长，避免原地新增重叠的身体。
     if (captured) this.pendingGrowth += 1;
@@ -256,6 +274,7 @@ export class GameEngine {
       ...this.state,
       ...collected,
       snake,
+      direction,
       exitActive,
       foods: this.replenish(
         snake,
@@ -267,9 +286,14 @@ export class GameEngine {
   }
 
   private changeStatus(status: GameStatus): readonly GameEvent[] {
+    const cancelled = this.aimDirection !== null;
+    this.aimDirection = null;
     this.turns.length = 0;
     this.state = this.snapshot({ ...this.state, status });
-    return [{ type: 'status-changed', status }];
+    return [
+      ...(cancelled ? [{ type: 'aim-cancelled' as const }] : []),
+      { type: 'status-changed', status },
+    ];
   }
 
   private enqueueTurn(direction: Direction): void {
@@ -294,6 +318,7 @@ export class GameEngine {
   }
 
   private freshState(status: GameStatus, sessionId: number): GameSnapshot {
+    this.aimDirection = null;
     this.fragile = (this.level.fragileObstacles ?? []).map((point) => ({ ...point }));
     this.slowRemaining = 0;
     this.pendingGrowth = 0;
@@ -324,6 +349,17 @@ export class GameEngine {
     const stepMs = this.slowRemaining > 0 ? 225 : this.mode.getStepMs(source);
     if (!Number.isFinite(stepMs) || stepMs <= 0) throw new Error('模式步进间隔必须大于 0');
     const rule = this.mode.tailCut;
+    const skill = this.mode.expedition
+      ? getSkill(this.mode.expedition, source.snake.length, source.status === 'playing')
+      : undefined;
+    const current = {
+      ...source,
+      stepMs,
+      canCutTail: skill?.available ?? false,
+      ...(skill
+        ? { skill, fragileObstacles: this.fragile, growthPending: this.pendingGrowth }
+        : {}),
+    };
     return Object.freeze({
       ...source,
       snake: Object.freeze(source.snake.map((point) => Object.freeze({ ...point }))),
@@ -343,6 +379,19 @@ export class GameEngine {
             ),
             slowSteps: this.slowRemaining,
             growthPending: this.pendingGrowth,
+            skillAction:
+              this.aimDirection !== null && skill
+                ? Object.freeze({
+                    kind: 'aiming' as const,
+                    direction: this.aimDirection,
+                    preview: resolveSkillEffects(
+                      current,
+                      skill,
+                      this.aimDirection,
+                      this.mode.resolveNextPosition,
+                    ),
+                  })
+                : Object.freeze({ kind: 'idle' as const }),
           }
         : {}),
     });

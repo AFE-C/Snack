@@ -26,13 +26,21 @@ export class InputController {
   private readonly options: InputOptions;
   private touch: { id: number; x: number; y: number } | null = null;
   private disposed = false;
+  private qHeld = false;
+  private skillPointer: { id: number; x: number; y: number } | null = null;
 
   constructor(options: InputOptions) {
     this.options = options;
     options.document.addEventListener('keydown', this.onKeyDown);
+    options.document.addEventListener('keyup', this.onKeyUp);
+    options.document.defaultView?.addEventListener('blur', this.onPlatformPause);
     options.document.addEventListener('visibilitychange', this.onVisibilityChange);
     options.document.addEventListener('candy:pause', this.onPlatformPause);
     options.root.addEventListener('click', this.onClick);
+    options.root.addEventListener('pointerdown', this.onSkillDown);
+    options.root.addEventListener('pointermove', this.onSkillMove);
+    options.root.addEventListener('pointerup', this.onSkillUp);
+    options.root.addEventListener('pointercancel', this.onSkillCancel);
     options.canvas.addEventListener('pointerdown', this.onPointerDown);
     options.canvas.addEventListener('pointerup', this.onPointerUp);
     options.canvas.addEventListener('pointercancel', this.onPointerCancel);
@@ -43,9 +51,15 @@ export class InputController {
     this.disposed = true;
     const { document, root, canvas } = this.options;
     document.removeEventListener('keydown', this.onKeyDown);
+    document.removeEventListener('keyup', this.onKeyUp);
+    document.defaultView?.removeEventListener('blur', this.onPlatformPause);
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
     document.removeEventListener('candy:pause', this.onPlatformPause);
     root.removeEventListener('click', this.onClick);
+    root.removeEventListener('pointerdown', this.onSkillDown);
+    root.removeEventListener('pointermove', this.onSkillMove);
+    root.removeEventListener('pointerup', this.onSkillUp);
+    root.removeEventListener('pointercancel', this.onSkillCancel);
     canvas.removeEventListener('pointerdown', this.onPointerDown);
     canvas.removeEventListener('pointerup', this.onPointerUp);
     canvas.removeEventListener('pointercancel', this.onPointerCancel);
@@ -53,6 +67,10 @@ export class InputController {
   }
 
   clearGesture(): void {
+    this.qHeld = false;
+    if (this.skillPointer && this.options.root.hasPointerCapture?.(this.skillPointer.id))
+      this.options.root.releasePointerCapture(this.skillPointer.id);
+    this.skillPointer = null;
     if (this.touch && this.options.canvas.hasPointerCapture?.(this.touch.id))
       this.options.canvas.releasePointerCapture(this.touch.id);
     this.touch = null;
@@ -88,9 +106,64 @@ export class InputController {
       if (!event.repeat) this.options.onAction({ type: 'toggle-pause' });
     } else if (key === 'q') {
       event.preventDefault();
-      if (!event.repeat) this.options.onAction({ type: 'cut-tail' });
+      if (!event.repeat && !this.qHeld) {
+        this.qHeld = true;
+        this.options.onAction(
+          this.expedition ? { type: 'skill-press', source: 'keyboard' } : { type: 'cut-tail' },
+        );
+      }
     }
   };
+
+  private get expedition(): boolean {
+    return this.options.root.dataset.mode === 'expedition';
+  }
+
+  private readonly onKeyUp = (event: KeyboardEvent): void => {
+    if (event.key.toLowerCase() !== 'q' || !this.qHeld) return;
+    this.qHeld = false;
+    this.options.onAction({ type: 'skill-release', source: 'keyboard' });
+  };
+
+  private readonly onSkillDown = (event: PointerEvent): void => {
+    if (!this.expedition || this.skillPointer || !(event.target instanceof Element)) return;
+    const button = event.target.closest<HTMLButtonElement>('[data-action="cut-tail"]');
+    if (!button || button.disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    this.skillPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    this.options.root.setPointerCapture?.(event.pointerId);
+    this.options.onAction({ type: 'skill-press', source: 'pointer' });
+    event.preventDefault();
+  };
+
+  private readonly onSkillMove = (event: PointerEvent): void => {
+    if (!this.skillPointer || event.pointerId !== this.skillPointer.id) return;
+    this.emitSwipe(event.clientX - this.skillPointer.x, event.clientY - this.skillPointer.y);
+    event.preventDefault();
+  };
+
+  private readonly onSkillUp = (event: PointerEvent): void => {
+    if (!this.skillPointer || event.pointerId !== this.skillPointer.id) return;
+    this.onSkillMove(event);
+    this.skillPointer = null;
+    if (this.options.root.hasPointerCapture?.(event.pointerId))
+      this.options.root.releasePointerCapture(event.pointerId);
+    this.options.onAction({ type: 'skill-release', source: 'pointer' });
+    event.preventDefault();
+  };
+
+  private readonly onSkillCancel = (event: PointerEvent): void => {
+    if (!this.skillPointer || event.pointerId !== this.skillPointer.id) return;
+    this.skillPointer = null;
+    this.options.onAction({ type: 'skill-cancel', source: 'pointer' });
+  };
+
+  private emitSwipe(dx: number, dy: number): boolean {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_THRESHOLD_PX) return false;
+    const direction =
+      Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+    this.options.onAction({ type: 'turn', direction });
+    return true;
+  }
 
   private readonly onClick = (event: MouseEvent): void => {
     if (!(event.target instanceof Element)) return;
@@ -108,6 +181,16 @@ export class InputController {
         this.options.onAction({ type: 'toggle-sound' });
         break;
       case 'cut-tail':
+        if (this.expedition) {
+          // A keyboard/assistive click is a quick cast. Pointer casts use press/release above.
+          if (event.detail === 0) {
+            this.options.onAction({ type: 'skill-press', source: 'button' });
+            this.options.onAction({ type: 'skill-release', source: 'button' });
+          }
+          break;
+        }
+        this.options.onAction({ type: 'cut-tail' });
+        break;
       case 'home':
       case 'open-campaign':
       case 'open-classic':
@@ -165,9 +248,7 @@ export class InputController {
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX && Math.abs(dy) < SWIPE_THRESHOLD_PX) {
       this.options.onAction({ type: 'primary' });
     } else {
-      const direction =
-        Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
-      this.options.onAction({ type: 'turn', direction });
+      this.emitSwipe(dx, dy);
     }
     event.preventDefault();
   };
@@ -178,7 +259,7 @@ export class InputController {
 
   private readonly onVisibilityChange = (): void => {
     if (this.options.document.hidden) {
-      this.touch = null;
+      this.clearGesture();
       this.options.onAction({ type: 'pause' });
     }
   };

@@ -2,6 +2,9 @@ import type { GameEngine } from '../core/engine';
 import type { GameCommand, GameEvent, GameSnapshot } from '../core/types';
 import type { AudioPort, FrameClock, GameView, InputAction, StorageAdapter } from './ports';
 import { selectAudioEvents } from './audio-feedback';
+import { isSessionAction } from './ports';
+import type { InputSource } from './ports';
+import { AIM_DURATION_MS, RELEASE_HOLD_MS } from './action-timing';
 
 const MAX_FRAME_DELTA_MS = 250;
 const MAX_STEPS_PER_FRAME = 5;
@@ -35,6 +38,9 @@ export class GameApplication {
   private disposed = false;
   private isNewRecord = false;
   private pendingEnd: { sessionId: number; elapsedMs: number } | null = null;
+  private aimOwner: InputSource | null = null;
+  private aimRemainingMs = 0;
+  private releaseRemainingMs = 0;
 
   constructor(options: ApplicationOptions) {
     this.engine = options.engine;
@@ -66,8 +72,22 @@ export class GameApplication {
   }
 
   handleAction(action: InputAction): void {
-    if (this.disposed) return;
+    if (this.disposed || !isSessionAction(action)) return;
     switch (action.type) {
+      case 'skill-press':
+        if (this.aimOwner !== null) break;
+        this.audio.unlock();
+        this.dispatch({ type: 'begin-aim' });
+        if (this.getSnapshot().skillAction?.kind === 'aiming') this.aimOwner = action.source;
+        break;
+      case 'skill-release':
+        if (this.aimOwner !== action.source) break;
+        this.aimOwner = null;
+        this.dispatch({ type: 'commit-aim' });
+        break;
+      case 'skill-cancel':
+        if (this.aimOwner === action.source) this.dispatch({ type: 'pause' });
+        break;
       case 'turn':
         this.dispatch({ type: 'turn', direction: action.direction });
         break;
@@ -95,13 +115,6 @@ export class GameApplication {
         this.storage.saveSoundEnabled(this.soundEnabled);
         this.updateHud();
         break;
-      case 'home':
-      case 'open-campaign':
-      case 'open-classic':
-      case 'level-select':
-      case 'select-level':
-      case 'next-level':
-        break;
     }
   }
 
@@ -119,6 +132,7 @@ export class GameApplication {
     if (this.frameId !== null) this.clock.cancelFrame(this.frameId);
     this.frameId = null;
     this.pendingEnd = null;
+    this.clearActionTiming();
     this.audio.dispose();
     this.view.dispose();
   }
@@ -126,11 +140,18 @@ export class GameApplication {
   private readonly onFrame = (timestamp: number): void => {
     this.frameId = null;
     if (this.disposed) return;
-    const deltaMs =
-      this.lastTimestamp === null
-        ? 0
-        : Math.min(MAX_FRAME_DELTA_MS, Math.max(0, timestamp - this.lastTimestamp));
+    const elapsedMs = this.lastTimestamp === null ? 0 : Math.max(0, timestamp - this.lastTimestamp);
+    const deltaMs = Math.min(MAX_FRAME_DELTA_MS, elapsedMs);
     this.lastTimestamp = timestamp;
+    const aiming = this.getSnapshot().skillAction?.kind === 'aiming';
+    const releasing = this.releaseRemainingMs > 0;
+    if (this.getSnapshot().status === 'playing') {
+      if (aiming) {
+        this.aimRemainingMs = Math.max(0, this.aimRemainingMs - elapsedMs);
+        if (this.aimRemainingMs === 0) this.dispatch({ type: 'commit-aim' });
+      } else if (releasing)
+        this.releaseRemainingMs = Math.max(0, this.releaseRemainingMs - elapsedMs);
+    }
     if (this.pendingEnd) {
       this.pendingEnd.elapsedMs += deltaMs;
       if (
@@ -141,7 +162,7 @@ export class GameApplication {
         this.pendingEnd = null;
       }
     }
-    if (this.getSnapshot().status === 'playing') {
+    if (this.getSnapshot().status === 'playing' && !aiming && !releasing) {
       this.accumulatorMs += deltaMs;
       let steps = 0;
       while (this.getSnapshot().status === 'playing' && steps < MAX_STEPS_PER_FRAME) {
@@ -154,7 +175,12 @@ export class GameApplication {
       if (steps === MAX_STEPS_PER_FRAME) this.accumulatorMs = 0;
     }
     const snapshot = this.getSnapshot();
-    this.view.draw(snapshot, snapshot.status === 'paused' ? 0 : deltaMs);
+    const presentationDelta = snapshot.status === 'paused' ? 0 : deltaMs;
+    this.view.draw(snapshot, presentationDelta, {
+      worldDeltaMs: snapshot.status === 'playing' && !aiming && !releasing ? deltaMs : 0,
+      aimRemainingMs: this.aimRemainingMs,
+      releaseRemainingMs: this.releaseRemainingMs,
+    });
     this.audio.update?.(snapshot.status === 'paused' ? 0 : deltaMs, snapshot);
     this.scheduleFrame();
   };
@@ -165,6 +191,7 @@ export class GameApplication {
     for (const event of events) {
       switch (event.type) {
         case 'session-started':
+          this.clearActionTiming();
           this.pendingEnd = null;
           this.isNewRecord = false;
           this.resetClock();
@@ -174,6 +201,7 @@ export class GameApplication {
           break;
         case 'status-changed':
           if (event.status === 'paused') {
+            this.clearActionTiming();
             this.resetClock();
             this.audio.setPaused(true);
             this.view.showOverlay(snapshot, false);
@@ -184,6 +212,7 @@ export class GameApplication {
           }
           break;
         case 'game-ended':
+          this.clearActionTiming();
           this.resetClock();
           this.isNewRecord = snapshot.modeId === 'classic' && event.score > this.highScore;
           if (this.isNewRecord) {
@@ -195,6 +224,23 @@ export class GameApplication {
           break;
         case 'level-completed':
           this.onLevelCompleted?.(event.levelId);
+          break;
+        case 'aim-started':
+          this.aimRemainingMs = AIM_DURATION_MS;
+          this.accumulatorMs = 0;
+          break;
+        case 'aim-cancelled':
+          this.clearActionTiming();
+          this.accumulatorMs = 0;
+          break;
+        case 'aim-changed':
+          break;
+        case 'skill-used':
+          this.aimRemainingMs = 0;
+          this.releaseRemainingMs = RELEASE_HOLD_MS;
+          this.accumulatorMs = 0;
+          break;
+        case 'terrain-broken':
           break;
         case 'tail-cut':
         case 'exit-opened':
@@ -213,6 +259,12 @@ export class GameApplication {
   private resetClock(): void {
     this.lastTimestamp = null;
     this.accumulatorMs = 0;
+  }
+
+  private clearActionTiming(): void {
+    this.aimOwner = null;
+    this.aimRemainingMs = 0;
+    this.releaseRemainingMs = 0;
   }
 
   private updateHud(): void {

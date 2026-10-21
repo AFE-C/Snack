@@ -31,6 +31,19 @@ export interface Food extends Position {
   readonly points: number;
 }
 
+export interface SkillPreview {
+  readonly direction: Direction;
+  readonly range: readonly Position[];
+  readonly broken: readonly Position[];
+  readonly captured: Food | null;
+  readonly next: Position;
+  readonly danger: 'wall' | 'obstacle' | 'body' | null;
+}
+
+export type SkillAction =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'aiming'; readonly direction: Direction; readonly preview: SkillPreview };
+
 export interface OrderRequirement {
   readonly fruitType: string;
   readonly required: number;
@@ -96,15 +109,28 @@ export interface GameSnapshot extends RuleContext {
   readonly fragileObstacles?: readonly Position[];
   readonly slowSteps?: number;
   readonly growthPending?: number;
+  readonly skillAction?: SkillAction;
 }
 
 export type GameCommand =
-  | { readonly type: 'start' | 'restart' | 'pause' | 'resume' | 'cut-tail' | 'use-skill' }
-  | { readonly type: 'turn'; readonly direction: Direction };
+  | {
+      readonly type:
+        | 'start'
+        | 'restart'
+        | 'pause'
+        | 'resume'
+        | 'cut-tail'
+        | 'use-skill'
+        | 'begin-aim'
+        | 'commit-aim'
+        | 'cancel-aim';
+    }
+  | { readonly type: 'turn' | 'aim'; readonly direction: Direction };
 
 export type GameEvent =
   | { readonly type: 'session-started'; readonly sessionId: number }
   | { readonly type: 'status-changed'; readonly status: GameStatus }
+  | { readonly type: 'aim-started' | 'aim-changed' | 'aim-cancelled' }
   | { readonly type: 'tail-cut'; readonly segments: readonly Position[] }
   | { readonly type: 'skill-used'; readonly skill: SkillSnapshot }
   | { readonly type: 'terrain-broken'; readonly positions: readonly Position[] }

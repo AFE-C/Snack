@@ -1,5 +1,4 @@
 import type { InputAction } from '../app/ports';
-import type { Direction } from '../core/types';
 
 /** 按下沿映射，摇杆死区 0.55；输入轮询不拥有游戏或渲染时钟。 */
 export class GamepadInput {
@@ -8,12 +7,14 @@ export class GamepadInput {
   constructor(
     private readonly emit: (action: InputAction) => void,
     private readonly menu: () => boolean,
+    private readonly aimedSkill: () => boolean = () => false,
   ) {}
 
   mount(): void {
     if (this.timer !== null) return;
     this.timer = setInterval(() => {
       if (document.hidden) {
+        if (this.previous.has('skill')) this.emit({ type: 'skill-cancel', source: 'gamepad' });
         this.previous.clear();
         return;
       }
@@ -50,13 +51,18 @@ export class GamepadInput {
     }
     for (const key of pressed) {
       if (this.previous.has(key)) continue;
-      if (['up', 'down', 'left', 'right'].includes(key))
-        this.emit({ type: this.menu() ? 'navigate-menu' : 'turn', direction: key as Direction });
+      if (key === 'up' || key === 'down' || key === 'left' || key === 'right')
+        this.emit({ type: this.menu() ? 'navigate-menu' : 'turn', direction: key });
       else if (key === 'confirm') this.emit({ type: this.menu() ? 'activate-menu' : 'primary' });
       else if (key === 'back') this.emit({ type: this.menu() ? 'back-menu' : 'toggle-pause' });
-      else if (key === 'skill') this.emit({ type: 'cut-tail' });
+      else if (key === 'skill')
+        this.emit(
+          this.aimedSkill() ? { type: 'skill-press', source: 'gamepad' } : { type: 'cut-tail' },
+        );
       else this.emit({ type: 'toggle-pause' });
     }
+    if (this.previous.has('skill') && !pressed.has('skill'))
+      this.emit({ type: pad ? 'skill-release' : 'skill-cancel', source: 'gamepad' });
     this.previous = pressed;
   }
   dispose(): void {
