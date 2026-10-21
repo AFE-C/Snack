@@ -1,5 +1,6 @@
 /** Player-facing copy belongs to content, never to the simulation or renderer. */
 export const STAR_COPY = Object.freeze({
+  canvasHint: '游戏棋盘，方向键或 WASD 移动。目标星核带四角标记，按住 Q 选择方向，松开施法。',
   paused: '已暂停',
   roomComplete: '本区完成',
   runComplete: '第一星区已完成',

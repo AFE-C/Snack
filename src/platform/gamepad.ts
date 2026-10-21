@@ -4,6 +4,7 @@ import type { InputAction } from '../app/ports';
 export class GamepadInput {
   private previous = new Set<string>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private skillBlockedUntilRelease = false;
   constructor(
     private readonly emit: (action: InputAction) => void,
     private readonly menu: () => boolean,
@@ -14,6 +15,7 @@ export class GamepadInput {
     if (this.timer !== null) return;
     this.timer = setInterval(() => {
       if (document.hidden) {
+        this.skillBlockedUntilRelease = true;
         if (this.previous.has('skill')) this.emit({ type: 'skill-cancel', source: 'gamepad' });
         this.previous.clear();
         return;
@@ -49,6 +51,10 @@ export class GamepadInput {
       ] as const)
         if (pad.buttons[index]?.pressed) pressed.add(key);
     }
+    if (this.skillBlockedUntilRelease) {
+      if (pressed.has('skill')) pressed.delete('skill');
+      else if (pad) this.skillBlockedUntilRelease = false;
+    }
     for (const key of pressed) {
       if (this.previous.has(key)) continue;
       if (key === 'up' || key === 'down' || key === 'left' || key === 'right')
@@ -61,14 +67,17 @@ export class GamepadInput {
         );
       else this.emit({ type: 'toggle-pause' });
     }
-    if (this.previous.has('skill') && !pressed.has('skill'))
+    if (this.previous.has('skill') && !pressed.has('skill')) {
       this.emit({ type: pad ? 'skill-release' : 'skill-cancel', source: 'gamepad' });
+      if (!pad) this.skillBlockedUntilRelease = true;
+    }
     this.previous = pressed;
   }
   dispose(): void {
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
     this.previous.clear();
+    this.skillBlockedUntilRelease = false;
   }
 }
 

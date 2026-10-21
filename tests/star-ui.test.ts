@@ -95,6 +95,14 @@ describe('星蛇输入', () => {
     expect(emit).toHaveBeenCalledTimes(1);
     input.poll([]);
     expect(emit).toHaveBeenLastCalledWith({ type: 'skill-cancel', source: 'gamepad' });
+    const count = emit.mock.calls.length;
+    input.poll([pad]);
+    expect(emit).toHaveBeenCalledTimes(count);
+    buttons[5] = { pressed: false, touched: false, value: 0 };
+    input.poll([pad]);
+    buttons[2] = { pressed: true, touched: true, value: 1 };
+    input.poll([pad]);
+    expect(emit).toHaveBeenLastCalledWith({ type: 'skill-press', source: 'gamepad' });
     input.dispose();
   });
 });

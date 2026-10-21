@@ -24,6 +24,26 @@ export default tseslint.config(
   },
   prettier,
   {
+    files: ['src/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: ['../app/*', '../ui/*', '../render/*', '../platform/*', '../content/*'] },
+      ],
+      'no-restricted-globals': [
+        'error',
+        'window',
+        'document',
+        'localStorage',
+        'requestAnimationFrame',
+        'setTimeout',
+        'setInterval',
+        'performance',
+        'Date',
+      ],
+    },
+  },
+  {
     files: ['src/**/*.ts'],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

@@ -49,6 +49,10 @@ export class GameUi {
 
   updateHud(snapshot: GameSnapshot, settings: PlayerSettings): void {
     this.root.dataset.theme = 'candy';
+    requireElement(this.root, '#gameCanvas').setAttribute(
+      'aria-label',
+      '游戏棋盘，方向键或 WASD 移动，也可以在触屏上滑动。闯关时四角标记表示还缺的水果。',
+    );
     requireElement(this.root, '#scoreLabel').textContent = 'SCORE';
     requireElement(this.root, '#comboLabel').textContent = 'COMBO';
     requireElement(this.root, '#controlsHint').textContent =

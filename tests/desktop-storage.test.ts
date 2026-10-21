@@ -21,8 +21,10 @@ describe('桌面文件存档', () => {
     expect(store.set('candySnakeExpedition', '{"version":1}')).toBe(true);
     store.set('candySnakeHighScore', '123');
     store.set('candySnakeSoundEnabled', 'false');
+    store.set('starSnakeVisualSettings', '{"version":1,"effects":"reduced","shake":false}');
     const reopened = new FileStore(folder);
     expect(reopened.get('candySnakeHighScore')).toBe('123');
+    expect(reopened.get('starSnakeVisualSettings')).toContain('reduced');
     expect(reopened.get('candySnakeExpedition')).toBe('{"version":1}');
     expect(store.set('../outside', 'bad')).toBe(false);
     expect(store.get('constructor')).toBeNull();

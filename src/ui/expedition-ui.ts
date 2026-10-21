@@ -23,6 +23,7 @@ export class ExpeditionUi {
       node.hidden = node.id !== screen;
     this.root.dataset.screen = screen;
     this.root.dataset.theme = 'star';
+    element(this.root, 'gameCanvas').setAttribute('aria-label', STAR_COPY.canvasHint);
     this.root.dataset.mode = 'expedition';
     element(this.root, 'overlay').hidden = true;
     element(this.root, 'expeditionHud').hidden = screen !== 'playScreen';

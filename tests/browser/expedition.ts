@@ -109,30 +109,22 @@ function button(label: string, action: () => void | Promise<void>) {
   panel.append(node);
 }
 for (const skill of SKILL_IDS) button(`验收配方 ${skill}`, () => start(skill));
-button('性能采样120帧', async () => {
+button('性能采样120帧', () => {
   start('crush');
   begin();
-  const costs: number[] = [],
-    timestamps: number[] = [];
+  const costs: number[] = [];
   for (let i = 0; i < 120; i++) {
     const direction = nextRoute(active.getSnapshot())?.[0];
     if (direction) active.dispatch({ type: 'turn', direction });
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame((timestamp) => {
-        timestamps.push(timestamp);
-        const before = performance.now();
-        clock.advance(16);
-        costs.push(performance.now() - before);
-        resolve();
-      }),
-    );
+    const before = performance.now();
+    clock.advance(16);
+    costs.push(performance.now() - before);
   }
   const sorted = [...costs].sort((a, b) => a - b);
   result.textContent = JSON.stringify({
     frames: costs.length,
     updateAndDrawP95Ms: sorted[Math.floor(sorted.length * 0.95)],
-    averageFps:
-      ((timestamps.length - 1) * 1000) / ((timestamps.at(-1) ?? 1) - (timestamps[0] ?? 0)),
+    sampling: 'manual 16ms steps; update/draw CPU cost, not display FPS',
   });
 });
 button('开始或继续', () => begin());

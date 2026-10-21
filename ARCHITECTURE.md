@@ -1,177 +1,67 @@
-# 架构与玩法开发指南
+# 星蛇 3.0.0 架构与扩展
 
-## 2.0.0 远征模块
-
-经典和三关流程仍由 `GameCoordinator` 管理。入口路由同一份 `InputAction` 到当前协调器；远征由 `ExpeditionController` 持有一个当前 `GameApplication`，切换房间或奖励页时销毁旧局。手柄适配器只轮询输入，不创建第二个游戏/渲染循环。
-
-`ExpeditionRun` 是纯边界状态机，`RunState` 保存版本、种子、配方、升级、房间、生命、入口长度、已完成房间得分、失败次数和阶段。阶段为 room / reward / won / lost。奖励只可从种子生成的三个未持有选项中选择，重复通关或双击不会再次领取。
-
-规则扩展保持在核心：
-
-- `LevelDefinition.fragileObstacles` 与普通障碍一起校验出生、出口、重复和静态连通。快照中的同名数组代表当前剩余脆墙，渲染和碰撞读取它；重开恢复初始墙体。
-- `ModeDefinition.expedition` 指定配方与升级。`getSkill` 计算消耗、强度、破墙距离、减速步数、吸果距离与可用性，HUD 与施法读取同一结果。
-- `GameSnapshot` 可选增加 skill、fragileObstacles、slowSteps、growthPending；旧模式不产生远征能力。
-- `use-skill` 命令显式施法；远征的旧 `cut-tail` 动作映射到同一入口，兼容 Q 与触屏按钮。事件新增 skill-used 和 terrain-broken。
-- 施法顺序为断尾、破墙、减速、吸果；不消费转向、不增加 tick。空施法仍消耗身体，射线只被地图边界和墙阻挡。
-- 普通进食在移动时生长；吸果和补给的额外生长记为 growthPending，在后续移动保留尾格实现，避免原地创建重叠身体。上限十二节，达到上限不妨碍订单与计分。
-- 缓流按逻辑步减少，暂停冻结，重试清理；重复施法只取最大剩余持续时间。
-
-入口长度决定安全出生路径的前若干格；房间引擎使用“整局种子 + 房间序号”创建独立随机源。失败扣心后重新创建相同入口引擎；关间升级和已完成得分留在整局状态中。失败次数跨同房间的重试保存，避免完美配送重复恢复生命。
-
-远征使用 `candySnakeExpedition`，版本为 1。解析时检查配方、升级唯一性、生命、阶段与房间数量的一致性。入口、失败结算、通关奖励和升级后写入检查点；中途返回/刷新丢弃本房间正在进行的局面，保留入口。旧三个键不迁移、不覆盖。
-
-浏览器与桌面共用 `BrowserStorage` 的键值访问协议；桌面通过隔离 preload 访问主进程白名单文件存档。`AudioPort.update` 为可选的相对时间更新入口，远征原创背景音乐复用游戏时钟；旧音效实现与测试替身可保持原接口。
-
-地图、配方与九项升级在 `content/expedition.ts` 定义。新增地图须保持最多十二节的安全出生路径，测试三个配方独立通关；如改动整局顺序或存档字段，升级进度版本并添加迁移。
-
-下面保留共用核心与经典/三关模式的开发说明；其中 1.2.0 的测试计数属于历史基线，最新结果见 VALIDATION.md。
-
-## 数据流与职责
+## 数据与所有权
 
 ```text
-键盘 / Pointer Events / 按钮
-          │ InputAction
-          ▼
-   GameCoordinator ─── MenuUi / 进度读写
-          │ 只拥有一个当前局
-          ▼
-   GameApplication ◀── FrameClock（一个 RAF）
-          │ GameCommand / step()
-          ▼
-     GameEngine
-   ┌──────┴───────┐
-GameSnapshot   GameEvent[]
-   └──────┬───────┘
-          ▼
-    HUD / Canvas / 特效 / 音效
+输入适配器 → 当前协调器 → GameApplication → GameEngine
+                                 ↓             ↓
+                            PresentationFrame  Snapshot + Events
+                                 └──────→ 单一 GameView → HUD / Canvas / Audio
 ```
 
-| 模块                       | 职责                                                                                               |
-| -------------------------- | -------------------------------------------------------------------------------------------------- |
-| `core`                     | 移动、碰撞、转向队列、补货、计分、订单、断尾、出口与地图校验；不依赖 DOM、Canvas、音频、时钟或存储 |
-| `content`                  | 水果、地图、模式注册和显示名称                                                                     |
-| `app/game-application.ts`  | 当前局的单一动画循环、暂停计时、事件分发与外设协调                                                 |
-| `app/game-coordinator.ts`  | 首页、选关、下一关、当前局销毁与进度保存                                                           |
-| `app/campaign-progress.ts` | 版本化进度解析、顺序解锁与完成记录，纯函数                                                         |
-| `platform`                 | 浏览器输入、Web Audio、localStorage 适配                                                           |
-| `render`                   | 根据快照绘图，根据事件生成效果；不判定玩法                                                         |
-| `ui`                       | 菜单、订单、按钮和结算文案，使用文本节点更新                                                       |
+- 核心：整数网格移动、转向队列、碰撞、订单、计分、技能与只读快照，不读取 DOM、时间、存储。随机源可注入。
+- 内容：地图、模式、技能参数、升级和中文文案。规则 ID 与显示主题分离。
+- 应用：一个活动房间、一个 RAF，管理瞄准窗口、释放停顿、移动累积、结算延迟与存档边界。
+- 平台：键盘、指针、手柄、Web Audio、浏览器存储和 Electron 桥。
+- 表现：远征使用 StarGameView，糖果模式使用 CandyGameView。每局只构造对应实现，各自拥有 HUD 与效果。
+- 外层：ShellUi 拥有设置弹窗和画面设置；导航清理输入手势并销毁旧局。
 
-`main.ts` 组装具体外设。输入适配器全程只有一个实例，转交动作给当前局；切换页面清除未完成触屏手势。旧局的 RAF、音频和特效会销毁。HMR 还会注销全局输入监听器。
+## 状态、技能与时钟
 
-## 核心 API 与状态
+GameStatus 保持 start / playing / paused / gameover / won。远征增加 SkillAction 判别联合：idle，或 aiming（方向及 SkillPreview）。瞄准属于 playing 内部状态，不触发暂停遮罩。
 
 ```ts
-const engine = new GameEngine({ level, mode, random: Math.random });
-engine.dispatch({ type: 'start' });
-engine.dispatch({ type: 'turn', direction: 'up' });
-const events = engine.step();
-engine.dispatch({ type: 'cut-tail' });
-const snapshot = engine.getSnapshot();
+engine.dispatch({ type: 'begin-aim' });
+engine.dispatch({ type: 'aim', direction: 'up' });
+const action = engine.getSnapshot().skillAction;
+if (action?.kind === 'aiming') console.log(action.preview);
+engine.dispatch({ type: 'commit-aim' });
 ```
 
-`dispatch` 接受 `start`、`restart`、`pause`、`resume`、`turn`、`cut-tail`。`step` 仅推进一个网格步，暂停和结束时不执行。随机源必须返回 `[0, 1)`，与视觉随机数独立。
+进入瞄准清空旧转向；turn 在瞄准时改为调整瞄准方向。反向限制始终相对进入时的实际航向，不能通过先向上再向左绕过。暂停取消瞄准，不扣身体。
 
-`GameSnapshot` 及嵌套数据冻结为只读。`foods` 是数组，经典模式也通过 `foods[0]` 访问；没有水果时为 `[]`。`orderProgress` 含水果类型、目标数、已收集数；`exitActive` 是出口状态，`canCutTail` 已包括状态与长度条件。`victoryCondition` 告诉表现层当前目标类型。
+resolveSkillEffects 是无随机、无副作用的纯计算：预测断尾后的身体、破岩、随后牵引及下一格危险。提交使用同一计算结果，再应用缓时、计分、订单、生长与补货。预览不能调用补货或随机源。效果顺序固定为断尾、破岩、缓时、牵引。
 
-状态为 `start → playing ⇄ paused → gameover / won`。重试新建当前关局面和 `sessionId`，保留已完成关卡。暂停、恢复、重开和结束清空转向队列；断尾保留队列且不增加 tick。
+原 use-skill / cut-tail 立即施法命令保留给已有规则调用与回放，不能在瞄准中绕过确认。实际远征输入使用按下、松开、取消；旧糖果 Q 仍立即断尾。
 
-事件包括 `session-started`、`status-changed`、`food-eaten`、`combo-milestone`、`order-item-completed`、`tail-cut`、`exit-opened`、`level-completed`、`game-ended`。`order-item-completed` 携带 `fruitType`，仅在该类计数首次达到要求时触发；继续吃已收齐类型不会重复通知，重试重新计算。`tail-cut` 带移除的段坐标，供表现层绘图；闯关 `game-ended.reason` 为 `order-completed`。只有进入激活出口才发 `level-completed`，应用据此保存进度。
+GameApplication 拥有 1200ms 瞄准倒计时和 60ms 释放停顿，数值在 action-timing.ts。倒计时使用非负原始帧间隔，移动使用至多 250ms 的帧间隔、每帧至多五步。时停与释放阶段不积累移动时间。恢复后走完整当前步长。
 
-`core/order.ts` 的 `getRemainingOrder` 从只读进度派生 `{ fruitType, remaining }` 列表，过滤已完成项，HUD 与 Canvas 共同使用。目标水果绘制固定角标和底衬，所有同类目标同时标记；不添加导航或优先路线，补货、断尾和重试后的快照直接决定标记。`GameSnapshot` 与存档格式不变。
+PresentationFrame 提供 worldDeltaMs、aimRemainingMs、releaseRemainingMs。普通世界效果在瞄准时冻结，瞄准环继续更新；暂停时所有相对时间冻结。音频聚焦状态独立于暂停，施放或取消立即清理蓄力音符。
 
-闯关 HUD 为需求预留 60px 两行空间，为反馈预留 24px；收齐项隐藏或切换出口提示时保持高度。短反馈使用 900ms 相对计时，暂停时传入 0，重开和销毁清除。收齐反馈优先于普通加分，出口反馈优先于单类收齐。闯关棋盘不画加分/连击飘字、不播放连击震动，只保留少量局部粒子；经典模式不变。
+## 输入、投影与绘制
 
-每步依次消费转向、映射目标格、检查墙/障碍/身体、移动、进食计分、推进订单、补货、判断胜利。未进食时先排除本步移走的尾格。补货枚举有限空格，不使用“随机直到找到空格”的循环。
+输入设备仅发动作。一次瞄准绑定 keyboard / gamepad / pointer / button 来源，其他来源松开无效；超时后保持来源占用直到松开。手柄 X / RB 作为一个逻辑技能键，断开与切后台后要求松开再按。重开和路由清理触屏捕获。
 
-## 添加地图
+投影参数：相对地面俯角 60°，水平旋转为 0°。世界 x 向右、y 向下，z 向上，单位为一格。BoardProjection 负责适配、投影和地面逆变换，所有绘制使用同一变换。逻辑网格与碰撞不使用屏幕坐标。
 
-地图与模式分开配置。下面是可以放进 `content/catalog.ts` 的闯关示例：
+实体按地面 y、x 稳定排序；地面标记先画，世界粒子后画。陨石前景遮挡关键对象时使用 0.35 透明度，占格底边保留。星蛇球体和收集物按投影位置绘制，不把整张 Canvas 做 CSS 倾斜。
 
-```ts
-const PICNIC_LEVEL: LevelDefinition = {
-  id: 'picnic',
-  name: '野餐角落',
-  cols: 10,
-  rows: 8,
-  obstacles: [
-    { x: 6, y: 3 },
-    { x: 6, y: 4 },
-  ],
-  initialSnake: [
-    { x: 3, y: 6 },
-    { x: 2, y: 6 },
-    { x: 1, y: 6 },
-  ],
-  initialDirection: 'right',
-  order: [{ fruitType: 'strawberry', required: 3 }],
-  exit: { x: 8, y: 1 },
-};
-```
+Canvas 实际像素随显示宽度和 DPR 调整，DPR 上限 2。标准粒子上限 192，精简模式 64。菜单、舞台、HUD 和旧糖果样式拆分，使用 CSS layer 和 data-theme 隔离；文字与 HUD 不参与世界投影。
 
-将地图追加到 `CAMPAIGN_LEVELS`，就会出现在选关菜单，并自动进入 `LEVELS` 注册表。添加专属说明可扩展 `ui/menu-ui.ts` 的 `LEVEL_DESCRIPTIONS`。更新最终结算文案和通关测试。已完成列表依赖关卡顺序，发布后优先在末尾追加；重排、改 id 时应升级存档版本并提供迁移。
+## 内容扩展
 
-出生蛇身从头到尾相邻排列，不能重叠、越界或朝向颈部。障碍不能重复或覆盖出生点。订单与出口必须一起提供：订单类型不重复、数量为正整数；出口必须为空格。闯关地图还检查所有可走格从出生点静态可达，订单水果必须存在且权重大于零。
+添加地图时使用 LevelDefinition：尺寸、普通障碍、脆障碍、安全出生路径、订单与出口。prepareLevel 检查重叠、越界、连通性和出生方向。远征出生路径须容纳最多 12 节；为三种技能补充完整通关测试。
 
-静态连通不代表实时操作必胜；设计地图后，运行固定种子完整通关用例，验证路线和技能。当前三关用例在 `tests/campaign-engine.test.ts`，第三关实际执行断尾。
+当前章节明确为六个区域，中间四区各两个变体。ROOMS 保存十张地图，getRoom 按房间槽位和种子选取；新增下一章时需扩展槽位选择和 RunState 版本，不能仅向数组末尾追加后假定自动出现。
 
-Canvas 自动按 `cols × rows × 20` 设置逻辑尺寸，再按屏幕宽度缩放；碰撞、食物与绘图均读取同一份地图。经典地图可省略订单与出口，配合 `fill-board` 规则。
+添加模式时实现 ModeDefinition 的移动映射、计分和步长策略。新增主动技能优先组合已有 breakRange / slowDuration / magnetRange；新增效果则在核心定义处理、扩展事件并补充共享预览验证。渲染和输入不判定命中。
 
-## 注册模式
+STAR_KINDS 将 grape / strawberry / orange / watermelon 映射成星星、月牙、晶体、星环；旧模式继续使用水果。技能与升级显示内容在 content/expedition.ts，通用提示在 star-copy.ts。
 
-`ModeDefinition` 集中描述能力和策略：
+## 存档与检查
 
-| 字段                  | 作用                                          |
-| --------------------- | --------------------------------------------- |
-| `foodCount`           | 同时存在的最大水果数                          |
-| `victoryCondition`    | `fill-board` 或 `orders-and-exit`             |
-| `tailCut`             | `null` 禁用，或 `{ segments, minimumLength }` |
-| `fruits`              | 类型、颜色、分数与权重                        |
-| `resolveNextPosition` | 下一格和地图 → 实际目标格，可实现穿墙         |
-| `calculatePoints`     | 已吃水果和新连击 → 非负安全整数分数           |
-| `getStepMs`           | 当前上下文 → 正数毫秒，可动态调整             |
+RunState 版本仍为 1；其字段和稳定 ID 不变。仅保存房间入口、失败结算、奖励和升级选择，恢复回到本区入口。parseRun 校验后逐项构造对象，快照只读冻结。最高分仍只由 classic 写入。
 
-例如注册穿墙练习模式：
+starSnakeVisualSettings 为独立版本 1 设置，包含 effects 和 shake；存储不可用时保留内存设置。默认尊重首次读取时的 prefers-reduced-motion。Electron 文件存档白名单包含新键，包名 candy-snake 与旧键保持兼容。
 
-```ts
-export const PRACTICE_MODE: ModeDefinition = {
-  ...CLASSIC_MODE,
-  id: 'practice',
-  name: '穿墙练习',
-  getStepMs: () => 180,
-  resolveNextPosition: (next, level) => ({
-    x: (next.x + level.cols) % level.cols,
-    y: (next.y + level.rows) % level.rows,
-  }),
-};
-// 在 MODES 中增加 practice: PRACTICE_MODE。
-```
-
-注册表负责查询；要给玩家入口，在首页增加 `data-action`，于 `InputAction`、输入映射和协调器增加对应导航动作，并调用同一 `openSession(level, mode)` 流程。绘图和转向模块无需理解穿墙或计分策略。规则函数保持确定性，不操作存档、DOM 或真实时钟。
-
-闯关补货先保留现有水果、补齐空位，再检查是否含未完成目标；如不含则替换一颗非目标。出口和蛇身、障碍都不参与食物位置抽样。订单完成后不再采样水果。无空位只减少水果数，闯关不会触发经典的填满通关。
-
-`cut-tail` 只在 playing 且长度至少为 `segments + minimumLength` 时执行，立即移除末尾并补货。当前闯关配置为 3 + 3，UI 对玩家明确展示此规则；如果设计新的技能数值，也应同步对应文案。
-
-## 生命周期与存档
-
-- `GameApplication.mount()` 幂等；重开仅重置状态，不创建新循环。每帧最多计入 250ms、补算最多五步。暂停/恢复重置时钟，特效按经过时间更新。
-- 结算等待 800ms，使用局次绑定的相对时间，不使用旧局 `setTimeout`。导航销毁局、取消 RAF，并用会话标识拒绝旧局回调。
-- 转向队列最多两条，基于队尾判定重复和反向。键盘 repeat 被忽略。触屏支持单指/触控笔、取消与 30 CSS 像素阈值，小屏另有方向按钮。
-- 音频在用户操作后解锁；暂停、静音、销毁停止并断开音符。设备不可用不影响规则。
-- `app/audio-feedback.ts` 在闯关每批事件中只选一个主提示音，优先级为出口开启、单类收齐、连击、普通进食；技能与生命周期音效正常分发。所有事件仍完整发送给视图，经典音效不筛选。
-- `StorageAdapter` 提供设置读写与 `loadCampaignProgress` / `saveCampaignProgress`。浏览器实现捕获访问和写入异常；纯进度函数校验版本、id、连续顺序和重复记录。
-- 正式键为 `candySnakeHighScore`、`candySnakeSoundEnabled`、`candySnakeCampaignProgress`。进度 JSON 为 `{ "version": 1, "completedLevelIds": ["garden"] }`。
-- 协调器在内存保留进度，即使写入失败当前会话也能解锁；不保证禁用存储后的刷新恢复。经典最高分只在 `modeId === 'classic'` 结算时更新。
-
-接手柄时转换为 `InputAction`；桌面文件存档实现 `StorageAdapter`；成就订阅 `GameEvent`。让平台能力留在适配层。
-
-## 规范与验证
-
-TypeScript 启用 strict、数组索引检查、精确可选属性、未使用符号及隐式返回检查。使用判别联合描述事件与动作，Prettier/EditorConfig/.gitattributes 统一格式和 LF；依赖版本与锁文件固定。
-
-提交前执行 `npm run check` 和 `npm run build`。此前 126 项回归用例保留，按新界面更新剩余需求展示断言，另增 20 项订单派生、收齐事件、目标标记、音效优先级与反馈生命周期测试，共 146 项。`tests/helpers/campaign-run.ts` 通过公开快照与指令规划路线，不修改核心内部状态。
-
-开发服务下的 `/tests/browser/index.html` 复用正式 DOM、渲染、应用和输入，用种子 42 与手动 `FrameClock` 检查浏览器完整三关流程。QA 存档加前缀，避免污染正式进度；生产入口不导入测试页。正式页面另外验证真实时钟、键盘、暂停、音效、触屏按钮和窄屏。
-
-发布单 HTML 使用 `vite-plugin-singlefile` 内嵌资源。浏览器工具不能访问 `file://`，因此工具验证使用 HTTP 发布预览并检查内嵌资源；人工双击验收步骤见 `VALIDATION.md`。
+提交检查：npm run check、npm run build。桌面另执行 desktop:verify 与 desktop:smoke，静态包完整不能代替真实启动。完整审查入口见 REVIEW.md。
