@@ -71,6 +71,11 @@ export class StarRenderer {
     this.effects.handle(events, snapshot);
   }
 
+  dispose(): void {
+    this.effects.reset();
+    this.projection = null;
+  }
+
   draw(snapshot: GameSnapshot, deltaMs: number, frame?: PresentationFrame): void {
     const worldDelta = frame?.worldDeltaMs ?? deltaMs;
     this.timeMs += worldDelta;

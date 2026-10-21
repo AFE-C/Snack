@@ -26,25 +26,53 @@ export function parseRun(raw: string | null): RunState | null {
   try {
     const value: unknown = JSON.parse(raw ?? 'null');
     if (!value || typeof value !== 'object') return null;
-    const r = value as Record<string, unknown>;
-    const integer = (key: string, min: number, max: number) =>
-      typeof r[key] === 'number' && Number.isSafeInteger(r[key]) && r[key] >= min && r[key] <= max;
     if (
-      r.version !== 1 ||
-      !integer('seed', 0, 0xffffffff) ||
-      !SKILL_IDS.some((id) => id === r.skillId) ||
-      !integer('roomIndex', 0, 5) ||
-      !integer('hearts', 0, 3) ||
-      !integer('entryLength', 3, 12) ||
-      !integer('score', 0, Number.MAX_SAFE_INTEGER) ||
-      !integer('roomFailures', 0, 3) ||
-      !['room', 'reward', 'won', 'lost'].includes(String(r.phase)) ||
-      !Array.isArray(r.upgrades) ||
-      r.upgrades.some((id) => !UPGRADE_IDS.includes(id)) ||
-      new Set(r.upgrades).size !== r.upgrades.length
+      !('version' in value) ||
+      !('seed' in value) ||
+      !('skillId' in value) ||
+      !('roomIndex' in value) ||
+      !('hearts' in value) ||
+      !('entryLength' in value) ||
+      !('score' in value) ||
+      !('roomFailures' in value) ||
+      !('phase' in value) ||
+      !('upgrades' in value)
     )
       return null;
-    const run = r as unknown as RunState;
+    const integer = (item: unknown, min: number, max: number): item is number =>
+      typeof item === 'number' && Number.isSafeInteger(item) && item >= min && item <= max;
+    const isSkill = (item: unknown): item is SkillId => SKILL_IDS.some((id) => id === item);
+    const isUpgrade = (item: unknown): item is UpgradeId => UPGRADE_IDS.some((id) => id === item);
+    if (
+      value.version !== 1 ||
+      !integer(value.seed, 0, 0xffffffff) ||
+      !isSkill(value.skillId) ||
+      !integer(value.roomIndex, 0, 5) ||
+      !integer(value.hearts, 0, 3) ||
+      !integer(value.entryLength, 3, 12) ||
+      !integer(value.score, 0, Number.MAX_SAFE_INTEGER) ||
+      !integer(value.roomFailures, 0, 3) ||
+      (value.phase !== 'room' &&
+        value.phase !== 'reward' &&
+        value.phase !== 'won' &&
+        value.phase !== 'lost') ||
+      !Array.isArray(value.upgrades) ||
+      !value.upgrades.every(isUpgrade) ||
+      new Set(value.upgrades).size !== value.upgrades.length
+    )
+      return null;
+    const run: RunState = {
+      version: 1,
+      seed: value.seed,
+      skillId: value.skillId,
+      roomIndex: value.roomIndex,
+      hearts: value.hearts,
+      entryLength: value.entryLength,
+      score: value.score,
+      roomFailures: value.roomFailures,
+      phase: value.phase,
+      upgrades: value.upgrades,
+    };
     if (run.phase === 'lost' ? run.hearts !== 0 : run.hearts < 1) return null;
     if (run.phase === 'reward' && run.roomIndex === 5) return null;
     if (run.phase === 'won' && run.roomIndex !== 5) return null;

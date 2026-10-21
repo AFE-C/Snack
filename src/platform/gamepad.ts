@@ -75,9 +75,10 @@ export class GamepadInput {
 export function navigateMenu(root: HTMLElement, action: InputAction): void {
   const overlay = root.querySelector<HTMLElement>('#overlay');
   const screen =
-    overlay && !overlay.hidden
+    root.querySelector<HTMLElement>('dialog[open]') ??
+    (overlay && !overlay.hidden
       ? overlay
-      : root.querySelector<HTMLElement>('[data-screen]:not([hidden])');
+      : root.querySelector<HTMLElement>('[data-screen]:not([hidden])'));
   if (!screen) return;
   const buttons = [...screen.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')].filter(
     (item) => !item.closest('[hidden]'),

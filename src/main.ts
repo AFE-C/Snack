@@ -12,12 +12,18 @@ import { ExpeditionController } from './app/expedition-controller';
 import { ExpeditionUi } from './ui/expedition-ui';
 import { GamepadInput, navigateMenu } from './platform/gamepad';
 import type { InputAction } from './app/ports';
+import { ShellUi } from './ui/shell-ui';
 
 function bootstrap(): () => void {
   const root = document.querySelector<HTMLElement>('#gameRoot');
   const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas');
   if (!root || !canvas) throw new Error('游戏页面缺少必要元素');
-  const storage = new BrowserStorage(() => window.candyDesktop ?? window.localStorage);
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const storage = new BrowserStorage(() => window.candyDesktop ?? window.localStorage, {
+    effects: reducedMotion ? 'reduced' : 'standard',
+    shake: !reducedMotion,
+  });
+  const shell = new ShellUi(root, storage);
   const menu = new MenuUi(root);
   const clock = {
     requestFrame: (callback: (timestamp: number) => void) => requestAnimationFrame(callback),
@@ -38,9 +44,46 @@ function bootstrap(): () => void {
       }),
   );
   const isMenu = () =>
-    root.dataset.screen !== 'playScreen' || !root.querySelector<HTMLElement>('#overlay')?.hidden;
+    shell.settingsOpen ||
+    root.dataset.screen !== 'playScreen' ||
+    !root.querySelector<HTMLElement>('#overlay')?.hidden;
   const handleAction = (action: InputAction) => {
-    if (action.type === 'primary' && root.dataset.screen !== 'playScreen') {
+    if (action.type === 'open-settings') {
+      if (expedition) expedition.handleAction({ type: 'pause' });
+      else coordinator.handleAction({ type: 'pause' });
+      input.clearGesture();
+      shell.openSettings();
+      return;
+    }
+    if (
+      action.type === 'close-settings' ||
+      (shell.settingsOpen && (action.type === 'toggle-pause' || action.type === 'back-menu'))
+    ) {
+      shell.closeSettings();
+      return;
+    }
+    if (action.type === 'toggle-effects') {
+      shell.toggleEffects();
+      return;
+    }
+    if (action.type === 'toggle-shake') {
+      shell.toggleShake();
+      return;
+    }
+    if (action.type === 'open-extras') {
+      input.clearGesture();
+      expedition?.dispose();
+      expedition = null;
+      coordinator.handleAction({ type: 'home' });
+      menu.showExtras();
+      return;
+    }
+    if (action.type === 'toggle-sound' && root.dataset.screen !== 'playScreen') {
+      storage.saveSoundEnabled(!storage.load().soundEnabled);
+      shell.sync();
+      return;
+    }
+    if (action.type === 'primary' && (shell.settingsOpen || root.dataset.screen !== 'playScreen')) {
       navigateMenu(root, { type: 'activate-menu' });
       return;
     }
@@ -94,7 +137,7 @@ function bootstrap(): () => void {
             storage,
             clock,
             onGameEnded,
-            view: new BrowserGameView(root, canvas, run),
+            view: new BrowserGameView(root, canvas, run, () => shell.settings),
             audio: new BrowserAudio(undefined, true),
           }),
       );
@@ -106,6 +149,7 @@ function bootstrap(): () => void {
       menu.updateContinue(storage.loadExpedition());
     } else if (expedition) expedition.handleAction(action);
     else coordinator.handleAction(action);
+    if (action.type === 'toggle-sound') shell.sync();
   };
   const input = new InputController({
     document,

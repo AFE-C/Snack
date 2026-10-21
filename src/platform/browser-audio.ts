@@ -13,6 +13,7 @@ export class BrowserAudio implements AudioPort {
   private disposed = false;
   private musicElapsed = 0;
   private musicNote = 0;
+  private focused = false;
 
   constructor(
     private readonly createContext: AudioContextFactory = () => new AudioContext(),
@@ -46,9 +47,21 @@ export class BrowserAudio implements AudioPort {
     this.syncGain();
   }
 
+  setFocused(focused: boolean): void {
+    if (this.focused && !focused) this.stopVoices();
+    this.focused = focused;
+    this.syncGain();
+  }
+
   play(event: GameEvent): void {
     if (!this.enabled || this.paused || this.disposed) return;
-    if (event.type === 'session-started') {
+    if (event.type === 'aim-started') {
+      this.tone(196, 1.2, 'sine', 0.035);
+      this.tone(392, 1.2, 'triangle', 0.018);
+    } else if (event.type === 'terrain-broken') {
+      this.tone(110, 0.09, 'triangle', 0.12);
+      this.tone(330, 0.12, 'sine', 0.05, 0.03);
+    } else if (event.type === 'session-started') {
       this.musicNote = 0;
       this.musicElapsed = 0;
       this.stopVoices();
@@ -146,7 +159,7 @@ export class BrowserAudio implements AudioPort {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       const at = context.currentTime + delay;
-      oscillator.type = type;
+      oscillator.type = this.music && type === 'square' ? 'triangle' : type;
       oscillator.frequency.value = frequency;
       gain.gain.setValueAtTime(0, at);
       gain.gain.linearRampToValueAtTime(volume, at + 0.01);
@@ -183,7 +196,7 @@ export class BrowserAudio implements AudioPort {
   private syncGain(): void {
     if (this.master && this.context) {
       this.master.gain.setValueAtTime(
-        this.enabled && !this.paused ? 1 : 0,
+        this.enabled && !this.paused ? (this.focused ? 0.4 : 1) : 0,
         this.context.currentTime,
       );
     }

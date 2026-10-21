@@ -48,6 +48,15 @@ export class GameUi {
   }
 
   updateHud(snapshot: GameSnapshot, settings: PlayerSettings): void {
+    this.root.dataset.theme = 'candy';
+    requireElement(this.root, '#scoreLabel').textContent = 'SCORE';
+    requireElement(this.root, '#comboLabel').textContent = 'COMBO';
+    requireElement(this.root, '#controlsHint').textContent =
+      '方向键 / WASD / 触屏滑动　空格 开始 / 重开　P / Esc 暂停';
+    requireElement(this.root, '#orderReady').textContent = '订单收齐 · 前往绿色出口';
+    requireElement(this.root, '#aimStatus').textContent = '';
+    requireElement(this.root, '#skillNote').textContent =
+      '舍去尾部 3 节，保留至少 3 节。分数与订单不变。';
     const campaign = snapshot.victoryCondition === 'orders-and-exit';
     this.root.dataset.mode = campaign ? 'campaign' : 'classic';
     this.bestScore = settings.highScore;

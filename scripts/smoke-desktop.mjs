@@ -10,9 +10,9 @@ const report = path.join(data, 'report.json');
 const executable = path.resolve(
   project,
   '..',
-  'candy-snake-windows',
-  'Candy Snake-win32-x64',
-  'CandySnake.exe',
+  'star-snake-windows',
+  'Star Snake-win32-x64',
+  'StarSnake.exe',
 );
 const env = { ...process.env, CANDY_SNAKE_DATA: data };
 delete env.ELECTRON_RUN_AS_NODE;

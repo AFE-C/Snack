@@ -5,6 +5,7 @@ const KEYS = new Set([
   'candySnakeSoundEnabled',
   'candySnakeCampaignProgress',
   'candySnakeExpedition',
+  'starSnakeVisualSettings',
 ]);
 
 class FileStore {

@@ -3,20 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ff6b9d" />
+    <meta name="theme-color" content="#10172F" />
     <meta
       name="description"
-      content="糖果工坊试玩版：实时规划路线，用断尾施放三种配方，选择九项升级，完成六房间远征。保留经典与三关闯关。"
+      content="星蛇：收集星核，按住 Q 时停选方向，消耗尾巴施放技能，穿过六个区域。"
     />
-    <title>Candy Snake - 糖果贪吃蛇</title>
+    <title>星蛇 · Star Snake</title>
   </head>
   <body>
-    <main class="game-container" id="gameRoot" aria-label="糖果贪吃蛇">
+    <main class="game-container" id="gameRoot" data-theme="star" aria-label="星蛇">
       <header class="stage-header">
-        <h1 class="game-title">CANDY SNAKE<span>糖果工坊 · 试玩版</span></h1>
-        <button class="text-btn fullscreen-button" data-action="toggle-fullscreen" type="button">
-          ⛶ 全屏
-        </button>
+        <h1 class="game-title">
+          <span class="brand-star"
+            ><svg viewBox="0 0 52 32" aria-hidden="true">
+              <path
+                d="M4 24h12q8 0 8-8t8-8h8"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="8"
+                stroke-linecap="round"
+              />
+              <path d="m42 1 3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#FFD35A" /></svg
+            >星蛇</span
+          >
+          <span class="brand-candy">CANDY SNAKE</span>
+        </h1>
+        <nav class="stage-actions" aria-label="游戏设置">
+          <button class="text-btn" data-action="open-settings" type="button">设置</button>
+          <button class="text-btn fullscreen-button" data-action="toggle-fullscreen" type="button">
+            全屏
+          </button>
+        </nav>
       </header>
       <section
         id="homeScreen"
@@ -25,104 +42,165 @@
         aria-labelledby="homeTitle"
       >
         <div class="home-copy">
-          <p class="chapter-label">巧克力工坊的第一天</p>
-          <h2 id="homeTitle">把身体，<br />变成下一条路。</h2>
-          <p class="menu-intro">收集糖果，绕过自己的尾巴。<br />舍下三节身体，施放你的独家配方。</p>
-          <button class="pixel-btn expedition-start" data-action="open-expedition" type="button">
-            开始糖果远征 <span>六个房间 · 三种配方 · 每局不同的升级</span>
-          </button>
-          <button
-            class="secondary-btn resume-button"
-            id="resumeExpedition"
-            data-action="resume-expedition"
-            type="button"
-            hidden
-          >
-            继续远征
-          </button>
-          <div class="legacy-modes">
-            <button class="pixel-btn mode-button" data-action="open-campaign" type="button">
-              糖果闯关<span>三张地图 · 订单收集 · Q 断尾</span>
+          <h2 id="homeTitle">星蛇<span>Star Snake</span></h2>
+          <p class="menu-intro">收集星核。<br />消耗尾巴，施放技能。</p>
+          <div class="home-actions">
+            <button class="pixel-btn expedition-start" data-action="open-expedition" type="button">
+              出发 <span>第一星区</span>
             </button>
-            <button class="secondary-btn mode-button" data-action="open-classic" type="button">
-              经典模式<span>20 × 20 棋盘 · 挑战最高分</span>
+            <button
+              class="secondary-btn resume-button"
+              id="resumeExpedition"
+              data-action="resume-expedition"
+              type="button"
+              hidden
+            >
+              继续
             </button>
-            <p id="homeProgress" class="menu-note"></p>
+            <button class="text-btn" data-action="open-extras" type="button">附加模式</button>
           </div>
+          <p class="home-controls">方向键移动 · 按住 Q 瞄准</p>
         </div>
-        <div class="workshop-art" aria-hidden="true">
-          <svg viewBox="0 0 600 560" xmlns="http://www.w3.org/2000/svg">
+        <div class="star-hero" aria-hidden="true">
+          <svg viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="floorTiles" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M0 0h60v60H0z" fill="#f2d7b9" />
-                <path d="M0 0h30v30H0zm30 30h30v30H30z" fill="#f8e6cd" />
-              </pattern>
+              <radialGradient id="heroAura">
+                <stop stop-color="#64E4E8" stop-opacity=".2" />
+                <stop offset="1" stop-color="#64E4E8" stop-opacity="0" />
+              </radialGradient>
+              <radialGradient id="heroPearl" cx=".3" cy=".2">
+                <stop stop-color="#E8FFF2" />
+                <stop offset=".5" stop-color="#94E5E4" />
+                <stop offset="1" stop-color="#657EB6" />
+              </radialGradient>
+              <radialGradient id="heroPlanet" cx=".3" cy=".2">
+                <stop stop-color="#FFB8BD" />
+                <stop offset=".6" stop-color="#CA729B" />
+                <stop offset="1" stop-color="#7F598D" />
+              </radialGradient>
+              <linearGradient id="heroFloor" x2=".4" y2="1">
+                <stop stop-color="#34466E" />
+                <stop offset="1" stop-color="#263252" />
+              </linearGradient>
             </defs>
-            <path d="M40 100L335 25l230 145v265L265 530 40 380z" fill="#ba7c65" />
-            <path d="M40 100l225 145 300-75v255l-300 95L40 375z" fill="url(#floorTiles)" />
-            <path d="M40 100v275l225 145V245z" fill="#eed0c1" opacity=".55" />
-            <path d="M45 374l220 140 297-93" fill="none" stroke="#734936" stroke-width="12" />
-            <path
-              d="M92 330l105 64 108-30 85 52 111-34"
+            <ellipse cx="390" cy="310" rx="310" ry="235" fill="url(#heroAura)" />
+            <ellipse
+              cx="383"
+              cy="315"
+              rx="282"
+              ry="193"
+              transform="rotate(-17 383 315)"
               fill="none"
-              stroke="#639d81"
-              stroke-width="56"
-              stroke-linejoin="round"
+              stroke="#64E4E8"
+              stroke-opacity=".2"
             />
-            <path
-              d="M92 318l105 64 108-30 85 52 111-34"
+            <ellipse
+              cx="383"
+              cy="315"
+              rx="243"
+              ry="169"
+              transform="rotate(-17 383 315)"
               fill="none"
-              stroke="#9bd9ad"
-              stroke-width="43"
-              stroke-linejoin="round"
+              stroke="#8BA0D3"
+              stroke-opacity=".16"
+              stroke-dasharray="3 13"
             />
             <path
-              d="M110 326l15 8m31 18 15 8m50-5 15-4m35-10 15-4m37 15 15 9m29 18 15 8m47-5 15-4"
-              stroke="#61b991"
-              stroke-width="6"
+              d="M163 340q-18-15 7-25l292-87q18-5 33 6l118 83q20 14-3 24l-291 112q-20 8-37-4z"
+              fill="#18213D"
+              stroke="#61749C"
+              stroke-width="2"
             />
-            <path d="M460 345l43-13 33 18v38l-43 13-33-21z" fill="#7bbf99" />
-            <path d="M460 345l43-13 33 18-43 13z" fill="#c2edb7" />
             <path
-              d="M499 366v10m20-16v10"
-              stroke="#3c5345"
-              stroke-width="7"
+              d="M163 326q-18-15 7-25l292-87q18-5 33 6l118 83q20 14-3 24L319 439q-20 8-37-4z"
+              fill="url(#heroFloor)"
+              stroke="#8DA2CC"
+              stroke-width="2"
+            />
+            <path
+              d="m205 324 121 90m-59-109 121 86m-58-106 121 84m-59-103 122 81m-61-98 122 76M204 350l294-96M237 374l297-98M269 397l298-101"
+              stroke="#6E82AF"
+              stroke-opacity=".2"
+              fill="none"
+            />
+            <path
+              d="M241 350q-25-22 4-38l56-25q27-12 47 7l26 25q19 16 42 5l50-23"
+              fill="none"
+              stroke="#72B4C5"
+              stroke-width="36"
               stroke-linecap="round"
             />
-            <path d="M507 384l10-3" stroke="#3c5345" stroke-width="4" />
+            <g fill="url(#heroPearl)" stroke="#C5EFF4" stroke-width="1.5">
+              <circle cx="241" cy="344" r="23" />
+              <circle cx="240" cy="311" r="24" />
+              <circle cx="272" cy="292" r="25" />
+              <circle cx="308" cy="278" r="26" />
+              <circle cx="343" cy="291" r="27" />
+              <circle cx="373" cy="314" r="28" />
+              <circle cx="408" cy="316" r="29" />
+              <circle cx="447" cy="299" r="35" />
+            </g>
+            <path d="m428 265 7-17 7 17 18 7-18 7-7 17-7-17-18-7z" fill="#FFD35A" />
+            <ellipse cx="441" cy="294" rx="8" ry="11" fill="#F9FFF6" />
+            <ellipse cx="462" cy="290" rx="8" ry="11" fill="#F9FFF6" />
+            <ellipse cx="444" cy="294" rx="3.5" ry="6" fill="#243452" />
+            <ellipse cx="465" cy="290" rx="3.5" ry="6" fill="#243452" />
             <path
-              d="M180 170l75-20 55 34v67l-75 20-55-34z"
-              fill="#79503e"
-              stroke="#603c30"
-              stroke-width="4"
-            />
-            <path d="M180 170l75-20 55 34-75 20z" fill="#c8926c" />
-            <path
-              d="M202 179l53-14 33 20-53 14zm-10 21 32 20v27l-32-20zm47 22 57-16v30l-57 16z"
-              fill="#a56e50"
-            />
-            <path d="M245 205l8 15-12 8 13 15" fill="none" stroke="#f3c994" stroke-width="4" />
-            <path
-              d="M390 169q-27-43-53-6t37 62q49-33 16-56"
-              fill="#dd6f72"
-              stroke="#ad5258"
-              stroke-width="4"
-            />
-            <path d="M361 149l8 17 16-12-4 23" fill="#69916a" stroke="#69916a" stroke-width="5" />
-            <path d="M352 178l4 6m23-8 4 6m-17 9 4 6" stroke="#ffe4ab" stroke-width="4" />
-            <circle cx="130" cy="233" r="27" fill="#eeb66c" stroke="#c98b4e" stroke-width="4" />
-            <path d="M130 205q2-18 18-12" fill="none" stroke="#748c5d" stroke-width="5" />
-            <path
-              d="M423 275l12-24 12 24-12 24z"
-              fill="#fff3b0"
-              stroke="#d6ac59"
+              d="M449 312q8 5 14-3"
+              fill="none"
+              stroke="#355173"
               stroke-width="3"
+              stroke-linecap="round"
             />
-            <path d="M325 89h86v16h-86zm25 21h46v8h-46" stroke="#d4aa8b" stroke-width="5" />
-            <path d="M62 418l39 24m335 45 49-15" stroke="#f8e6cd" stroke-width="10" />
+            <circle cx="547" cy="134" r="48" fill="url(#heroPlanet)" />
+            <ellipse
+              cx="547"
+              cy="134"
+              rx="80"
+              ry="16"
+              fill="none"
+              stroke="#D6AAD7"
+              stroke-width="5"
+              transform="rotate(-24 547 134)"
+            />
+            <path
+              d="m345 153 9 24 24 9-24 9-9 24-9-24-24-9 24-9z"
+              fill="#FFD35A"
+              stroke="#FFF0B7"
+              stroke-width="2"
+            />
+            <path d="M543 359q-27-5-29 20t31 23q-21 7-31-7t-4-31 33-5" fill="#64E4E8" />
+            <path d="m209 198 7 17 18 7-18 7-7 18-7-18-17-7 17-7z" fill="#F4F4E8" opacity=".85" />
+            <path d="m592 421 4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#FF819D" />
+            <g fill="#D5E9FF">
+              <circle cx="270" cy="126" r="2" />
+              <circle cx="610" cy="235" r="2" />
+              <circle cx="138" cy="270" r="2" />
+              <circle cx="406" cy="464" r="2" />
+              <circle cx="454" cy="104" r="1.5" />
+            </g>
           </svg>
-          <p>长一点，攒下力量。短一点，拐出新路。</p>
         </div>
+      </section>
+      <section
+        id="extrasScreen"
+        class="menu-screen choice-screen"
+        data-screen
+        aria-labelledby="extrasTitle"
+        hidden
+      >
+        <h2 id="extrasTitle">附加模式</h2>
+        <p class="menu-intro">原来的糖果关卡，随时可以回来玩。</p>
+        <div class="legacy-modes">
+          <button class="pixel-btn mode-button" data-action="open-campaign" type="button">
+            糖果闯关<span>三张地图，收集订单，Q 断尾。</span>
+          </button>
+          <button class="secondary-btn mode-button" data-action="open-classic" type="button">
+            经典模式<span>20 × 20 棋盘，挑战最高分。</span>
+          </button>
+        </div>
+        <p id="homeProgress" class="menu-note"></p>
+        <button class="text-btn" data-action="home" type="button">返回标题</button>
       </section>
       <section
         id="recipeScreen"
@@ -131,13 +209,11 @@
         aria-labelledby="recipeTitle"
         hidden
       >
-        <p class="chapter-label">糖果远征 · 巧克力工坊</p>
-        <h2 id="recipeTitle">这次，用哪份配方？</h2>
-        <p class="menu-intro">
-          每份配方都能通关。身体越长，Q 越有力量。<br />每局三颗心，房间之间选择升级。
-        </p>
+        <p class="chapter-label">第一星区</p>
+        <h2 id="recipeTitle">选择技能</h2>
+        <p class="menu-intro">每次施法消耗尾部身体。9 节升到二级，12 节升到三级。</p>
         <div id="recipeList" class="choice-list"></div>
-        <button class="text-btn" data-action="home" type="button">返回首页</button>
+        <button class="text-btn" data-action="home" type="button">返回标题</button>
       </section>
       <section
         id="rewardScreen"
@@ -146,11 +222,11 @@
         aria-labelledby="rewardTitle"
         hidden
       >
-        <p class="chapter-label">房间已完成 · 移动已停止</p>
-        <h2 id="rewardTitle">给配方，加一点新想法。</h2>
+        <p class="chapter-label">本区完成</p>
+        <h2 id="rewardTitle">选择升级</h2>
         <p id="rewardSummary" class="menu-intro"></p>
         <div id="upgradeList" class="choice-list"></div>
-        <button class="text-btn" data-action="home" type="button">保存并返回</button>
+        <button class="text-btn" data-action="home" type="button">返回标题</button>
       </section>
       <section
         id="levelScreen"
@@ -167,16 +243,22 @@
       </section>
       <section id="playScreen" class="play-screen" data-screen aria-label="游戏区域" hidden>
         <div class="session-heading">
-          <p id="levelLabel" class="session-label">经典模式</p>
-          <button class="text-btn" id="menuBtn" data-action="home" type="button">返回首页</button>
+          <p id="levelLabel" class="session-label"></p>
+          <button class="text-btn" id="menuBtn" data-action="home" type="button">返回标题</button>
         </div>
         <div class="play-layout">
-          <aside class="play-sidebar" aria-label="订单和配方">
+          <aside class="play-sidebar" aria-label="游戏状态">
             <div class="score-board">
-              <div class="score-box">SCORE<br /><span id="score">0</span></div>
-              <div class="score-box">COMBO<br /><span id="combo">x0</span></div>
               <div class="score-box">
-                <span id="recordLabel" class="score-label">BEST</span><br /><span id="highScore"
+                <span id="scoreLabel" class="score-label">得分</span><br /><span id="score">0</span>
+              </div>
+              <div class="score-box">
+                <span id="comboLabel" class="score-label">连击</span><br /><span id="combo"
+                  >×0</span
+                >
+              </div>
+              <div class="score-box">
+                <span id="recordLabel" class="score-label">身体</span><br /><span id="highScore"
                   >0</span
                 >
               </div>
@@ -187,45 +269,42 @@
                   data-action="toggle-pause"
                   type="button"
                   aria-label="暂停游戏"
-                  title="暂停游戏"
                   disabled
                 >
-                  Ⅱ
+                  暂停
                 </button>
                 <button
                   class="sound-btn"
                   id="soundBtn"
                   data-action="toggle-sound"
                   type="button"
-                  aria-label="关闭音效"
-                  title="关闭音效"
+                  aria-label="关闭声音"
                   aria-pressed="true"
                 >
-                  🔊
+                  声音 开
                 </button>
               </div>
             </div>
-            <section id="expeditionHud" class="expedition-hud" aria-label="远征状态" hidden>
+            <section id="expeditionHud" class="expedition-hud" aria-label="航行状态" hidden>
               <p id="runHearts" class="run-hearts" aria-label="剩余 3 颗心">♥♥♥</p>
               <h3 id="skillPower"></h3>
+              <div id="bodySegments" class="body-segments" role="img" aria-label="身体长度"></div>
               <p id="runLesson"></p>
               <details id="buildDetails">
-                <summary>查看已选升级</summary>
+                <summary>已选升级</summary>
                 <p id="runUpgrades"></p>
               </details>
             </section>
-            <section id="campaignHud" class="campaign-hud" aria-label="当前订单" hidden>
+            <section id="campaignHud" class="campaign-hud" aria-label="剩余目标" hidden>
               <div class="order-slots">
                 <div id="orderRow" class="order-row">
                   <span class="order-label">还缺</span>
                   <div id="orderProgress" class="order-progress"></div>
                 </div>
-                <p id="orderReady" class="order-ready" hidden>订单收齐 · 前往绿色出口 →</p>
+                <p id="orderReady" class="order-ready" hidden>星门已打开</p>
               </div>
               <div class="order-status">
-                <p id="exitHint" class="exit-hint" role="status" aria-live="polite">
-                  四角标记 = 还缺的水果
-                </p>
+                <p id="exitHint" class="exit-hint" role="status" aria-live="polite"></p>
                 <p
                   id="campaignFeedback"
                   class="campaign-feedback"
@@ -244,11 +323,10 @@
                 type="button"
                 disabled
               >
-                Q 断尾 · 还需长到 6 节
+                按住 Q 瞄准
               </button>
-              <p class="skill-note" id="skillNote">
-                舍去尾部 3 节，保留至少 3 节。分数与订单不变。
-              </p>
+              <p id="aimStatus" class="aim-status" aria-hidden="true"></p>
+              <p class="skill-note" id="skillNote"></p>
             </div>
           </aside>
           <div class="board-column">
@@ -258,27 +336,24 @@
                 width="400"
                 height="400"
                 tabindex="0"
-                aria-label="游戏棋盘，使用方向键或 WASD 移动，也可以在触屏上滑动。闯关时四角标记表示还缺的水果。"
+                aria-label="游戏棋盘，方向键或 WASD 移动。目标星核带四角标记，按住 Q 选择方向，松开施法。"
                 >请使用支持 Canvas 的浏览器游玩。</canvas
               >
               <div class="combo-display" id="comboDisplay" aria-hidden="true"></div>
             </div>
             <div class="touch-directions" aria-label="触屏方向控制">
               <button data-action="turn" data-direction="left" type="button" aria-label="向左">
-                ←
-              </button>
-              <button data-action="turn" data-direction="up" type="button" aria-label="向上">
-                ↑
-              </button>
-              <button data-action="turn" data-direction="down" type="button" aria-label="向下">
-                ↓
-              </button>
-              <button data-action="turn" data-direction="right" type="button" aria-label="向右">
+                ←</button
+              ><button data-action="turn" data-direction="up" type="button" aria-label="向上">
+                ↑</button
+              ><button data-action="turn" data-direction="down" type="button" aria-label="向下">
+                ↓</button
+              ><button data-action="turn" data-direction="right" type="button" aria-label="向右">
                 →
               </button>
             </div>
             <p class="controls-hint" id="controlsHint">
-              方向键 / WASD / 触屏滑动<br />空格 开始 / 重开 &nbsp;|&nbsp; P / Esc 暂停
+              方向键 / WASD 移动　按住 Q 瞄准　P / Esc 暂停
             </p>
           </div>
         </div>
@@ -287,18 +362,62 @@
             <span class="s">S</span><span class="n">N</span><span class="a">A</span
             ><span class="k">K</span><span class="e">E</span>
           </div>
-          <h2 class="overlay-title" id="overlayTitle">CANDY SNAKE</h2>
-          <p class="overlay-score" id="overlayScore">最高分: 0</p>
+          <h2 class="overlay-title" id="overlayTitle">星蛇</h2>
+          <p class="overlay-score" id="overlayScore"></p>
           <p class="overlay-highlight" id="overlayHighlight" hidden></p>
-          <p class="overlay-hint" id="overlayHint">吃水果累积连击<br />每 10 连击有惊喜哦 ✨</p>
+          <p class="overlay-hint" id="overlayHint"></p>
           <button class="pixel-btn" id="primaryBtn" data-action="primary" type="button">
-            开始游戏
-          </button>
-          <button class="text-btn" id="overlayMenuBtn" data-action="home" type="button">
-            返回首页
+            进入本区</button
+          ><button class="text-btn" id="overlayMenuBtn" data-action="home" type="button">
+            返回标题
           </button>
         </section>
       </section>
+      <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
+        <div class="settings-heading">
+          <h2 id="settingsTitle">设置</h2>
+          <button class="text-btn" data-action="close-settings" type="button" aria-label="关闭设置">
+            关闭
+          </button>
+        </div>
+        <p class="settings-note">调整设置时，当前游戏暂停。</p>
+        <div class="setting-row">
+          <span>特效</span
+          ><button
+            class="secondary-btn"
+            id="effectsSetting"
+            data-action="toggle-effects"
+            type="button"
+          >
+            标准
+          </button>
+        </div>
+        <div class="setting-row">
+          <span>画面震动</span
+          ><button
+            class="secondary-btn"
+            id="shakeSetting"
+            data-action="toggle-shake"
+            type="button"
+            aria-pressed="true"
+          >
+            开
+          </button>
+        </div>
+        <div class="setting-row">
+          <span>声音</span
+          ><button
+            class="secondary-btn"
+            id="soundSetting"
+            data-action="toggle-sound"
+            type="button"
+            aria-pressed="true"
+          >
+            开
+          </button>
+        </div>
+        <p class="settings-note">精简特效保留范围、目标和危险提示。</p>
+      </dialog>
     </main>
     <script id="font-license" type="text/plain">
       Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net), with Reserved Font Name "Press Start 2P"

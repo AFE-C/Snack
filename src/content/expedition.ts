@@ -13,24 +13,24 @@ export interface ActiveSkillDefinition {
 export const SKILLS: readonly ActiveSkillDefinition[] = [
   {
     id: 'crush',
-    name: '脆糖冲击',
+    name: '破岩',
     icon: '✦',
-    description: '断尾，打开一条新路。',
-    detail: '破坏前方 1 / 2 / 3 格内的脆巧克力墙。裂纹表示可破坏，实心墙会阻挡技能。',
+    description: '击碎前方裂岩。',
+    detail: '破坏所选方向 1 / 2 / 3 格内的裂岩。完整陨石会挡住光束。',
   },
   {
     id: 'slow',
-    name: '冰糖缓流',
+    name: '缓时',
     icon: '❄',
-    description: '放慢脚步，留出思考时间。',
-    detail: '移动暂时变为 225ms / 步，持续 8 / 12 / 16 步。暂停时效果冻结。',
+    description: '释放后，暂时放慢移动。',
+    detail: '移动变为 225ms / 步，持续 8 / 12 / 16 步。',
   },
   {
     id: 'magnet',
-    name: '果香牵引',
+    name: '牵引',
     icon: '◎',
-    description: '隔着空格，把水果带回来。',
-    detail: '吸取正前方 2 / 3 / 4 格内第一颗水果。墙会挡住果香，身体不会。',
+    description: '吸取前方第一颗星核。',
+    detail: '吸取所选方向 2 / 3 / 4 格内第一颗星核。陨石会阻挡牵引，身体不会。',
   },
 ];
 export interface UpgradeDefinition {
@@ -42,57 +42,57 @@ export interface UpgradeDefinition {
 export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'supply',
-    name: '糖衣补给',
+    name: '额外生长',
     icon: '✚',
-    description: '每吃 3 颗水果，额外长 1 节。最多 12 节，每房间重新计数。',
+    description: '每收集 3 颗星核，多长 1 节。上限 12 节，每区重新计数。',
   },
   {
     id: 'economy',
-    name: '节省配方',
+    name: '节能',
     icon: 'Ⅱ',
     description: 'Q 只消耗 2 节身体，仍至少保留 3 节。',
   },
   {
     id: 'reserve',
-    name: '备用糖衣',
+    name: '备用能量',
     icon: '▰',
     description: '进入下一房间时，身体至少恢复到 6 节。',
   },
   {
     id: 'shelf',
-    name: '加大货架',
+    name: '更多星核',
     icon: '▦',
-    description: '棋盘最多同时出现 4 颗水果，增加路线选择。',
+    description: '星盘上同时出现的星核从 3 颗增加到 4 颗。',
   },
   {
     id: 'gift',
-    name: '订单赠品',
+    name: '双份收集',
     icon: '◇',
-    description: '每房间首颗目标水果，额外完成 1 份同类需求。',
+    description: '每区收集的首颗目标星核，按 2 颗计算。',
   },
   {
     id: 'perfect',
-    name: '完美配送',
+    name: '无伤补给',
     icon: '♡',
-    description: '房间首次尝试就通关，恢复 1 颗心。最多 3 颗。',
+    description: '首次尝试就通过本区，恢复 1 颗心。上限 3 颗。',
   },
   {
     id: 'brittle',
-    name: '脆化涂层',
+    name: '附带破岩',
     icon: '✦',
-    description: 'Q 附带前方 1 格破墙；脆糖冲击的距离额外 +1。',
+    description: 'Q 附带前方 1 格破岩；破岩的距离额外 +1。',
   },
   {
     id: 'frost',
-    name: '冰糖余韵',
+    name: '附带缓时',
     icon: '❄',
-    description: 'Q 附带 4 步减速；冰糖缓流的持续时间额外 +4 步。',
+    description: 'Q 附带 4 步减速；缓时的持续时间额外 +4 步。',
   },
   {
     id: 'aroma',
-    name: '果香余波',
+    name: '附带牵引',
     icon: '◎',
-    description: 'Q 附带前方 1 格吸果；果香牵引的距离额外 +1。',
+    description: 'Q 附带前方 1 格牵引；牵引的距离额外 +1。',
   },
 ];
 
@@ -134,7 +134,7 @@ function room(
   size = 16,
 ): RoomDefinition {
   return {
-    chapter: '巧克力工坊',
+    chapter: '第一星区',
     lesson,
     level: {
       id,
@@ -155,80 +155,80 @@ function room(
 export const ROOMS: readonly RoomDefinition[] = [
   room(
     'workshop-entry',
-    '第一份配方',
-    '收集带角标的水果；Q 消耗身体施法。',
+    '出发地',
+    '收集带角标的星核。收齐后进入星门。',
     [],
     row(7, 7, 9),
     order(2, 2, 1),
   ),
   room(
     'shelves-a',
-    '绕过货架',
-    '试着先决定路线，再决定要吃的水果。',
+    '碎石带',
+    '从缺口绕过陨石，先收集带角标的星核。',
     [...wall(5, 2, 10, 6), ...wall(10, 3, 11, 8)],
     row(6, 7, 9),
     order(2, 3, 2),
   ),
   room(
     'shelves-b',
-    '糖纸回廊',
-    '缺口相互错开，出口在右上方。',
+    '双环之间',
+    '缺口相互错开，星门在右上方。',
     [...wall(6, 2, 10, 4), ...wall(11, 3, 11, 8)],
     row(8, 8, 10),
     order(2, 3, 2),
   ),
   room(
     'shortcut-a',
-    '巧克力捷径',
-    '裂纹墙可以被破坏；绕行也能送达。',
+    '裂岩捷径',
+    '裂岩可以击碎，也可以从缺口绕行。',
     [...wall(5, 2, 11, 8), ...wall(10, 2, 11, 4)],
     row(6, 6, 9),
     order(2, 3, 3, 1),
   ),
   room(
     'shortcut-b',
-    '脆糖夹层',
-    '用技能缩短路线，记得为后面留下身体。',
+    '岔路',
+    '施法需要身体，先想好下一次转向。',
     [...wall(4, 2, 11, 5), ...wall(11, 2, 11, 9)],
     row(7, 5, 10),
     order(2, 3, 3, 1),
   ),
   room(
     'ribbons-a',
-    '长长的糖衣',
-    '身体既能挡住回路，也能储备多次施法。',
+    '狭长航道',
+    '身体越长，技能越强，转弯也更难。',
     [...wall(4, 1, 10, 6), ...wall(8, 3, 11, 7), ...wall(12, 1, 10, 4)],
     row(5, 9, 11),
     order(3, 3, 3, 1),
   ),
   room(
     'ribbons-b',
-    '糖带交错',
-    '绕过尾巴，保留一条返回出口的路。',
+    '回转航道',
+    '绕过尾巴，留一条返回星门的路。',
     [...wall(4, 2, 11, 8), ...wall(8, 1, 10, 4), ...wall(12, 2, 11, 7)],
     row(6, 5, 7),
     order(3, 3, 3, 1),
   ),
   room(
     'mix-a',
-    '配方试验台',
-    '试着组合升级，让一次 Q 完成多件事。',
+    '交汇处',
+    '附带效果会与主动技能一起释放。',
     [...wall(5, 1, 11, 5), ...wall(10, 2, 11, 8)],
     row(7, 6, 9),
     order(3, 4, 3, 2),
   ),
   room(
     'mix-b',
-    '混合糖坊',
-    '选择适合当前构筑的通路。',
+    '星环之间',
+    '观察裂岩和缺口，选择适合当前技能的路。',
     [...wall(6, 1, 11, 7), ...wall(11, 2, 11, 4)],
     row(5, 7, 10),
     order(3, 4, 3, 2),
   ),
   room(
     'dispatch',
-    '最后一箱糖',
-    '完成大订单，把这一整套配方送出工坊。',
+    '最后一站',
+    '收齐最后一批星核，穿过星门。',
     [...wall(5, 2, 11, 7), ...wall(10, 2, 12, 5), ...wall(14, 3, 13, 9)],
     row(8, 6, 9).concat(row(6, 11, 13)),
     order(4, 5, 4, 2),
@@ -237,10 +237,13 @@ export const ROOMS: readonly RoomDefinition[] = [
 ];
 
 export function getRoom(seed: number, roomIndex: number): RoomDefinition {
-  if (roomIndex === 0) return ROOMS[0] as RoomDefinition;
-  if (roomIndex === 5) return ROOMS[9] as RoomDefinition;
+  if (!Number.isInteger(roomIndex) || roomIndex < 0 || roomIndex > 5)
+    throw new Error('Invalid room index');
   const variant = Math.floor(createSeededRandom((seed + roomIndex * 7919) >>> 0)() * 2);
-  return ROOMS[1 + (roomIndex - 1) * 2 + variant] as RoomDefinition;
+  const index = roomIndex === 0 ? 0 : roomIndex === 5 ? 9 : 1 + (roomIndex - 1) * 2 + variant;
+  const result = ROOMS[index];
+  if (!result) throw new Error('Missing room definition');
+  return result;
 }
 export function makeRoomLevel(room: RoomDefinition, length: number): LevelDefinition {
   return { ...room.level, initialSnake: BIRTH_PATH.slice(0, Math.max(3, Math.min(12, length))) };
@@ -249,7 +252,7 @@ export function makeExpeditionMode(rules: ExpeditionRules): ModeDefinition {
   return {
     ...CAMPAIGN_MODE,
     id: 'expedition',
-    name: '糖果远征',
+    name: '星蛇远征',
     foodCount: rules.upgrades.includes('shelf') ? 4 : 3,
     expedition: rules,
   };

@@ -17,8 +17,8 @@ app.whenReady().then(() => {
     height: 768,
     minWidth: 800,
     minHeight: 600,
-    title: 'Candy Snake · 糖果工坊',
-    backgroundColor: '#f9ebdc',
+    title: '星蛇 · Star Snake',
+    backgroundColor: '#10172f',
     show: !smokeReport,
     icon: path.join(app.getAppPath(), 'icon.png'),
     webPreferences: {
@@ -59,7 +59,7 @@ app.whenReady().then(() => {
       const writable = store.set('candySnakeHighScore', score ?? '7');
       const persisted =
         new FileStore(app.getPath('userData')).get('candySnakeHighScore') === (score ?? '7');
-      const ok = info.title.includes('Candy Snake') && info.homeVisible && writable && persisted;
+      const ok = info.title.includes('星蛇') && info.homeVisible && writable && persisted;
       fs.writeFileSync(
         smokeReport,
         JSON.stringify(

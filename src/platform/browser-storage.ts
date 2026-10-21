@@ -1,16 +1,22 @@
 import type { CampaignProgress, PlayerSettings, StorageAdapter } from '../app/ports';
 import { parseCampaignProgress } from '../app/campaign-progress';
+import { DEFAULT_VISUAL_SETTINGS, parseVisualSettings } from '../app/visual-settings';
+import type { VisualSettings } from '../app/visual-settings';
 
 export const HIGH_SCORE_KEY = 'candySnakeHighScore';
 export const SOUND_ENABLED_KEY = 'candySnakeSoundEnabled';
 export const CAMPAIGN_PROGRESS_KEY = 'candySnakeCampaignProgress';
 export const EXPEDITION_KEY = 'candySnakeExpedition';
+export const VISUAL_SETTINGS_KEY = 'starSnakeVisualSettings';
 
 export type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 /** 访问器也可能抛错，例如禁用存储的 file 页面或隐私模式。 */
 export class BrowserStorage implements StorageAdapter {
-  constructor(private readonly getStorage: () => KeyValueStorage) {}
+  constructor(
+    private readonly getStorage: () => KeyValueStorage,
+    private readonly visualDefaults = DEFAULT_VISUAL_SETTINGS,
+  ) {}
 
   load(): PlayerSettings {
     const rawScore = this.read(HIGH_SCORE_KEY);
@@ -47,6 +53,14 @@ export class BrowserStorage implements StorageAdapter {
   }
   saveExpedition(raw: string): void {
     this.write(EXPEDITION_KEY, raw);
+  }
+
+  loadVisualSettings(): VisualSettings {
+    return parseVisualSettings(this.read(VISUAL_SETTINGS_KEY), this.visualDefaults);
+  }
+  saveVisualSettings(settings: VisualSettings): void {
+    const raw = JSON.stringify({ version: 1, ...settings });
+    if (parseVisualSettings(raw) !== DEFAULT_VISUAL_SETTINGS) this.write(VISUAL_SETTINGS_KEY, raw);
   }
 
   private read(key: string): string | null {

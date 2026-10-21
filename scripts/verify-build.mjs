@@ -17,8 +17,14 @@ assert(
 );
 assert(!html.includes('candySnakeQa:') && !html.includes('qaState'), '发布 HTML 不应包含验收夹具');
 assert(
-  html.includes('糖果远征') && html.includes('skill-used') && html.includes('candySnakeExpedition'),
+  html.includes('星蛇') && html.includes('skill-used') && html.includes('candySnakeExpedition'),
   '发布 HTML 应包含远征和独立存档',
+);
+assert(
+  html.includes('begin-aim') &&
+    html.includes('commit-aim') &&
+    html.includes('starSnakeVisualSettings'),
+  '发布 HTML 应包含瞄准和独立画面设置',
 );
 assert(
   !html.includes('expeditionQaState') && !html.includes('MediaRecorder'),

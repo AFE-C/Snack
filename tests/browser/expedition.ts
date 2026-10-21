@@ -97,7 +97,10 @@ function button(label: string, action: () => void | Promise<void>) {
   node.addEventListener('click', () => {
     void Promise.resolve()
       .then(action)
-      .then(refresh)
+      .then(() => {
+        refresh();
+        window.scrollTo(0, 0);
+      })
       .catch((error) => {
         result.textContent = String(error);
       });
@@ -106,8 +109,50 @@ function button(label: string, action: () => void | Promise<void>) {
   panel.append(node);
 }
 for (const skill of SKILL_IDS) button(`验收配方 ${skill}`, () => start(skill));
+button('性能采样120帧', async () => {
+  start('crush');
+  begin();
+  const costs: number[] = [],
+    timestamps: number[] = [];
+  for (let i = 0; i < 120; i++) {
+    const direction = nextRoute(active.getSnapshot())?.[0];
+    if (direction) active.dispatch({ type: 'turn', direction });
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame((timestamp) => {
+        timestamps.push(timestamp);
+        const before = performance.now();
+        clock.advance(16);
+        costs.push(performance.now() - before);
+        resolve();
+      }),
+    );
+  }
+  const sorted = [...costs].sort((a, b) => a - b);
+  result.textContent = JSON.stringify({
+    frames: costs.length,
+    updateAndDrawP95Ms: sorted[Math.floor(sorted.length * 0.95)],
+    averageFps:
+      ((timestamps.length - 1) * 1000) / ((timestamps.at(-1) ?? 1) - (timestamps[0] ?? 0)),
+  });
+});
 button('开始或继续', () => begin());
 button('前进一逻辑步', () => advance());
+button('瞄准上方', () => {
+  if (active.getSnapshot().status === 'start') begin();
+  active.handleAction({ type: 'skill-press', source: 'keyboard' });
+  active.handleAction({ type: 'turn', direction: 'up' });
+  clock.advance(300);
+});
+button('释放技能', () => {
+  active.handleAction({ type: 'skill-release', source: 'keyboard' });
+  clock.advance(0);
+});
+button('时停超时', () => {
+  clock.advance(1200);
+});
+button('停止旧循环', () => {
+  controller.dispose();
+});
 button('收集一颗水果', () => {
   if (active.getSnapshot().status === 'start') begin();
   const combo = active.getSnapshot().combo;

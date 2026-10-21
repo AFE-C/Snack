@@ -95,7 +95,8 @@ export class InputController {
     if (direction) {
       event.preventDefault();
       const menu =
-        this.options.root.dataset.screen && this.options.root.dataset.screen !== 'playScreen';
+        !!this.options.root.querySelector('dialog[open]') ||
+        (this.options.root.dataset.screen && this.options.root.dataset.screen !== 'playScreen');
       if (!event.repeat)
         this.options.onAction({ type: menu ? 'navigate-menu' : 'turn', direction });
     } else if (key === ' ' || key === 'enter') {
@@ -199,6 +200,11 @@ export class InputController {
       case 'open-expedition':
       case 'resume-expedition':
       case 'toggle-fullscreen':
+      case 'open-extras':
+      case 'open-settings':
+      case 'close-settings':
+      case 'toggle-effects':
+      case 'toggle-shake':
         this.options.onAction({ type: control.dataset.action });
         break;
       case 'select-skill': {
@@ -226,6 +232,8 @@ export class InputController {
           this.options.onAction({ type: 'turn', direction });
         break;
       }
+      default:
+        return;
     }
     control.blur();
   };

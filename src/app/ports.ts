@@ -1,5 +1,6 @@
 import type { GameEvent, GameSnapshot } from '../core/types';
 import type { SkillId, UpgradeId } from '../core/expedition';
+import type { VisualSettings } from './visual-settings';
 
 export interface PlayerSettings {
   readonly highScore: number;
@@ -18,12 +19,15 @@ export interface StorageAdapter {
   saveCampaignProgress(progress: CampaignProgress): void;
   loadExpedition?(): string | null;
   saveExpedition?(raw: string): void;
+  loadVisualSettings?(): VisualSettings;
+  saveVisualSettings?(settings: VisualSettings): void;
 }
 
 export interface AudioPort {
   unlock(): void;
   setEnabled(enabled: boolean): void;
   setPaused(paused: boolean): void;
+  setFocused?(focused: boolean): void;
   play(event: GameEvent): void;
   update?(deltaMs: number, snapshot: GameSnapshot): void;
   dispose(): void;
@@ -77,22 +81,15 @@ export function isSessionAction(action: InputAction): action is SessionAction {
 export type InputAction =
   | SessionAction
   | {
-      readonly type:
-        | 'primary'
-        | 'toggle-pause'
-        | 'pause'
-        | 'toggle-sound'
-        | 'cut-tail'
-        | 'open-campaign'
-        | 'open-classic'
-        | 'home'
-        | 'level-select'
-        | 'next-level';
+      readonly type: 'open-campaign' | 'open-classic' | 'home' | 'level-select' | 'next-level';
     }
   | { readonly type: 'open-expedition' | 'resume-expedition' | 'toggle-fullscreen' }
+  | {
+      readonly type:
+        'open-extras' | 'open-settings' | 'close-settings' | 'toggle-effects' | 'toggle-shake';
+    }
   | { readonly type: 'select-skill'; readonly skillId: SkillId }
   | { readonly type: 'choose-upgrade'; readonly upgradeId: UpgradeId }
   | { readonly type: 'navigate-menu'; readonly direction: GameSnapshot['direction'] }
   | { readonly type: 'activate-menu' | 'back-menu' }
-  | { readonly type: 'select-level'; readonly levelId: string }
-  | { readonly type: 'turn'; readonly direction: GameSnapshot['direction'] };
+  | { readonly type: 'select-level'; readonly levelId: string };

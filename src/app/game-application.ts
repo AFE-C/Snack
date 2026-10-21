@@ -226,6 +226,7 @@ export class GameApplication {
           this.onLevelCompleted?.(event.levelId);
           break;
         case 'aim-started':
+          this.audio.setFocused?.(true);
           this.aimRemainingMs = AIM_DURATION_MS;
           this.accumulatorMs = 0;
           break;
@@ -236,6 +237,7 @@ export class GameApplication {
         case 'aim-changed':
           break;
         case 'skill-used':
+          this.audio.setFocused?.(false);
           this.aimRemainingMs = 0;
           this.releaseRemainingMs = RELEASE_HOLD_MS;
           this.accumulatorMs = 0;
@@ -262,6 +264,7 @@ export class GameApplication {
   }
 
   private clearActionTiming(): void {
+    this.audio.setFocused?.(false);
     this.aimOwner = null;
     this.aimRemainingMs = 0;
     this.releaseRemainingMs = 0;

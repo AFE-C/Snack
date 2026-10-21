@@ -64,25 +64,33 @@ export class MenuUi implements NavigationView {
     this.show('playScreen');
   }
 
+  showExtras(): void {
+    this.show('extrasScreen');
+  }
+
   updateContinue(raw: string | null): void {
     const run = parseRun(raw);
     const button = this.root.querySelector<HTMLElement>('#resumeExpedition');
     if (button) {
       button.hidden = !run || run.phase === 'won' || run.phase === 'lost';
       button.textContent = run
-        ? `继续远征 · 房间 ${run.roomIndex + 1} / 6 · ${run.hearts} 颗心`
-        : '继续远征';
+        ? `继续 · 第 ${run.roomIndex + 1} 区 / 6 · ${run.hearts} 颗心`
+        : '继续';
     }
   }
 
   private show(id: string): void {
     this.root.dataset.screen = id;
+    this.root.dataset.theme = id === 'levelScreen' || id === 'playScreen' ? 'candy' : 'star';
+    if (id !== 'playScreen') this.root.dataset.mode = '';
     this.root.querySelector<HTMLElement>('#expeditionHud')?.setAttribute('hidden', '');
     for (const screen of this.root.querySelectorAll<HTMLElement>('[data-screen]'))
       screen.hidden = screen.id !== id;
     for (const screen of ['homeScreen', 'levelScreen', 'playScreen'])
       this.element(screen).hidden = screen !== id;
     this.element('overlay').hidden = true;
+    const window = this.root.ownerDocument.defaultView;
+    if (window && window.scrollY !== 0) window.scrollTo(0, 0);
   }
 
   private element(id: string): HTMLElement {

@@ -28,12 +28,11 @@ export function resolveSkillEffects(
   const fragile = state.fragileObstacles ?? [];
   const range: Position[] = [];
   const broken: Position[] = [];
-  for (let d = 1; d <= Math.max(skill.breakRange, skill.magnetRange, 1); d += 1) {
+  for (let d = 1; d <= skill.breakRange; d += 1) {
     const point = at(d);
     if (!isInside(point, state.level) || solid(point)) break;
     range.push(point);
-    if (d <= skill.breakRange && fragile.some((wall) => samePosition(wall, point)))
-      broken.push(point);
+    if (fragile.some((wall) => samePosition(wall, point))) broken.push(point);
   }
   const remaining = fragile.filter((wall) => !broken.some((point) => samePosition(point, wall)));
   const blocked = (p: Position) => solid(p) || remaining.some((wall) => samePosition(wall, p));
@@ -41,6 +40,7 @@ export function resolveSkillEffects(
   for (let d = 1; d <= skill.magnetRange; d += 1) {
     const point = at(d);
     if (!isInside(point, state.level) || blocked(point)) break;
+    if (!range.some((p) => samePosition(p, point))) range.push(point);
     const food = state.foods.find((item) => samePosition(item, point));
     if (food) {
       captured = food;

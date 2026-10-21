@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const project = fileURLToPath(new URL('../', import.meta.url));
 const stage = path.join(project, 'work', 'desktop-stage');
-const output = path.resolve(project, '..', 'candy-snake-windows');
+const output = path.resolve(project, '..', 'star-snake-windows');
 if (path.dirname(output) !== path.resolve(project, '..')) throw new Error('Invalid output path');
 const pkg = JSON.parse(await readFile(path.join(project, 'package.json'), 'utf8'));
 await mkdir(path.join(stage, 'desktop'), { recursive: true });
@@ -23,7 +23,7 @@ await writeFile(
     name: pkg.name,
     version: pkg.version,
     main: 'desktop/main.cjs',
-    description: 'Candy Snake · 糖果工坊试玩版',
+    description: '星蛇 · Star Snake 试玩版',
     author: 'AFE-C',
   }),
 );
@@ -37,8 +37,8 @@ await copyFile(path.join(project, 'desktop', 'icon.png'), path.join(stage, 'icon
 const paths = await packager({
   dir: stage,
   out: output,
-  name: 'Candy Snake',
-  executableName: 'CandySnake',
+  name: 'Star Snake',
+  executableName: 'StarSnake',
   platform: 'win32',
   arch: 'x64',
   electronVersion: pkg.devDependencies.electron,
@@ -52,8 +52,8 @@ const paths = await packager({
   },
   win32metadata: {
     CompanyName: 'AFE-C',
-    FileDescription: 'Candy Snake · 糖果工坊',
-    ProductName: 'Candy Snake',
+    FileDescription: '星蛇 · Star Snake',
+    ProductName: 'Star Snake',
   },
 });
 console.log(`Windows 试玩包：${paths.join(', ')}`);

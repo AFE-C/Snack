@@ -2,6 +2,7 @@ import type { GameEvent, GameSnapshot, Position } from '../core/types';
 import { starKind } from '../content/star-theme';
 import { DIRECTION_VECTORS } from '../core/types';
 import type { BoardProjection } from './projection';
+import { GROUND_DEPTH_SCALE } from './projection';
 import { ellipse, glow, starPath } from './star-art';
 
 interface Spark {
@@ -32,6 +33,7 @@ export class StarEffects {
   private sparks: Spark[] = [];
   private beams: Beam[] = [];
   private pulls: Pull[] = [];
+  private rings: { point: Position; life: number }[] = [];
   private impactMs = 0;
   private timeMs = 0;
   private limited = false;
@@ -47,6 +49,7 @@ export class StarEffects {
     this.sparks = [];
     this.beams = [];
     this.pulls = [];
+    this.rings = [];
     this.impactMs = 0;
     this.timeMs = 0;
   }
@@ -71,6 +74,7 @@ export class StarEffects {
           this.beams.push({ from: center(p), to: center(head), color: '#64E4E8', life: 0.65 });
         }
       } else if (event.type === 'skill-used') {
+        if (event.skill.slowDuration > 0) this.rings.push({ point: center(head), life: 1 });
         const v = DIRECTION_VECTORS[snapshot.direction];
         const range = Math.max(event.skill.breakRange, event.skill.magnetRange, 1);
         this.beams.push({
@@ -94,6 +98,7 @@ export class StarEffects {
     }
     this.beams = this.beams.slice(-16);
     this.pulls = this.pulls.slice(-8);
+    this.rings = this.rings.slice(-4);
   }
 
   update(deltaMs: number): void {
@@ -112,11 +117,23 @@ export class StarEffects {
     this.beams = this.beams.filter((b) => b.life > 0);
     for (const pull of this.pulls) pull.life -= dt * 3.2;
     this.pulls = this.pulls.filter((p) => p.life > 0);
+    for (const ring of this.rings) ring.life -= dt * 2;
+    this.rings = this.rings.filter((ring) => ring.life > 0);
   }
 
   draw(ctx: CanvasRenderingContext2D, projection: BoardProjection): void {
     ctx.save();
     ctx.lineCap = 'round';
+    for (const ring of this.rings) {
+      const at = projection.project(ring.point, 0.15),
+        radius = projection.scale * (0.6 + (1 - ring.life) * 2);
+      ctx.globalAlpha = ring.life * 0.6;
+      ctx.strokeStyle = '#64E4E8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(at.x, at.y, radius, radius * GROUND_DEPTH_SCALE, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     for (const beam of this.beams) {
       const a = projection.project(beam.from, 0.45),
         b = projection.project(beam.to, 0.45);

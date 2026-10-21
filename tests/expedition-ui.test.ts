@@ -56,7 +56,7 @@ describe('远征输入与界面', () => {
       { ...engine.getSnapshot(), status: 'gameover' },
       { ...run.getSnapshot(), hearts: 0, phase: 'lost' },
     );
-    expect(root.querySelector('#primaryBtn')?.textContent).toBe('重新选择配方');
+    expect(root.querySelector('#primaryBtn')?.textContent).toBe('重新选择技能');
   });
   it('切换回经典隐藏远征信息，损坏存档不展示继续按钮', () => {
     const { root } = elements();
